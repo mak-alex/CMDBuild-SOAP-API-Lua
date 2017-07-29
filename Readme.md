@@ -25,4 +25,4 @@
 		print
 	)
 ```
-  lua src/cmdbuild.lua -h
+	lua src/cmdbuild.lua -h
