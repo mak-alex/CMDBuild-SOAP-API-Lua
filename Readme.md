@@ -9,7 +9,7 @@
 	lib/base64.lua
 
 ##Example
-```lua
+```
 	-- include cmdbuild module
 	local cmdbuild=require'src.cmdbuild'
 	 -- create new instance
