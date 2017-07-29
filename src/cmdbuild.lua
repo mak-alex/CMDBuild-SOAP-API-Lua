@@ -1065,7 +1065,7 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
   local attributes = {}
   local orders = {}
   local _limit = {}
-
+  
   local request = {
     url = self.url,
     soapaction = '',
@@ -1087,6 +1087,7 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
 
   if filter or filter_sq_operator then
     if filter and not filter_sq_operator then
+      local filters = {}
       filters = { tag = "soap1:queryType",
         { tag = "soap1:filter", 
           { tag = "soap1:name", filter.name },
@@ -1094,6 +1095,7 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
           { tag = "soap1:value", filter.value }
         }
       }
+      table.insert(request.entries, filters)
     end
 
     if not filter and filter_sq_operator then
@@ -1120,7 +1122,7 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
         end
       end
     end
-    --table.insert(request.entries, filters)
+    table.insert(request.entries, filters)
   end
   if order_type then
     orders = { tag = "soap1:orderType",
@@ -1221,6 +1223,33 @@ if (arg ~= nil) then
     if (n > 0) then
       if (v == "-h") then dump("CMDBuild", CMDBuild) break end
     end
+  end
+end
+
+local argparse = require "lib.ArgParse"
+
+local parser = argparse("script", "An example.")
+parser:flag("-l --list", "List all methods")
+parser:option("-c --credentials", "Set username and password for authorization in CMDBuild"):args(2)
+parser:option("-i --ip", "IP address for connect in CMDBuild")
+parser:option("-g --get_card_list", "Get card list, ex('Hosts')", nil)
+parser:option("-f --filter", "ex.(name operator value)"):args("*")
+
+local args = parser:parse()
+if args.list then dump("CMDBuild", CMDBuild) end
+if args.credentials and args.ip then
+  local cmdbuild = CMDBuild:new{
+    username = args.credentials[1],
+    password = args.credentials[2],
+    ip = args.ip
+  }
+  if args.get_card_list then
+    local filter
+    if args.filter then
+      filter = { name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
+    end
+    local resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
+    print(resp)
   end
 end
 

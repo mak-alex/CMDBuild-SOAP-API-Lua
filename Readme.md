@@ -7,6 +7,7 @@
 	luaxml 101012-2
 	bit32
 	lib/base64.lua
+  lib/ArgParse.lua
 
 ##Example
 ```
@@ -24,3 +25,4 @@
 		print
 	)
 ```
+  lua src/cmdbuild.lua -h
