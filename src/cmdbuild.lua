@@ -30,20 +30,19 @@
 require "luarocks.loader"
 require'LuaXML'
 local Log = require'lib.Log'
-local cjson = require'cjson'
-local pretty = require'lib.prettycjson'
 local XML = xml
-local CMDBuild = {}
-local mt = { __index = CMDBuild }
+local ok, cjson = pcall(require, "cjson.safe")
+local enc = ok and cjson.encode or function() return nil, "Lua cJSON encoder not found" end
 local base64 = require'lib.base64'
 local argparse = require "lib.ArgParse"
 local assert, error, pairs, tonumber, tostring, type = assert, error, pairs, tonumber, tostring, type
 local table = require"table"
 local tconcat, tinsert, tremove = table.concat, table.insert, table.remove
 local string = require"string"
+local sub = string.sub
+local rep = string.rep
 local gsub, strfind, strformat = string.gsub, string.find, string.format
 local max = require"math".max
-local concat = require("table").concat
 local ltn12 = require("ltn12")
 local client = { http = require("socket.http"), }
 local xml_header_template = '<?xml version="1.0"?>'
@@ -79,7 +78,64 @@ local Header = nil
 local wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
 local wssu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 local PassText="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
+local CMDBuild = {}
+local mt = { __index = CMDBuild }
 local Utils={}
+
+------------------------------------------------------------------------
+--         Name:  pretty
+--      Purpose:  
+--  Description:  cjson.encode pretty
+--   Parameters:  dt - {+DESCRIPTION+} ({+TYPE+})
+--                lf - {+DESCRIPTION+} ({+TYPE+})
+--                id - {+DESCRIPTION+} ({+TYPE+})
+--                ac - {+DESCRIPTION+} ({+TYPE+})
+--                ec - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  pretty string
+------------------------------------------------------------------------
+
+pretty = function(dt, lf, id, ac, ec)
+    local s, e = (ec or enc)(dt)
+    if not s then return s, e end
+    lf, id, ac = lf or "\n", id or "\t", ac or " "
+    local i, j, k, n, r, p, q  = 1, 0, 0, #s, {}, nil, nil
+    local al = sub(ac, -1) == "\n"
+    for x = 1, n do
+        local c = sub(s, x, x)
+        if not q and (c == "{" or c == "[") then
+            r[i] = p == ":" and tconcat{ c, lf } or tconcat{ rep(id, j), c, lf }
+            j = j + 1
+        elseif not q and (c == "}" or c == "]") then
+            j = j - 1
+            if p == "{" or p == "[" then
+                i = i - 1
+                r[i] = tconcat{ rep(id, j), p, c }
+            else
+                r[i] = tconcat{ lf, rep(id, j), c }
+            end
+        elseif not q and c == "," then
+            r[i] = tconcat{ c, lf }
+            k = -1
+        elseif not q and c == ":" then
+            r[i] = tconcat{ c, ac }
+            if al then
+                i = i + 1
+                r[i] = rep(id, j)
+            end
+        else
+            if c == '"' and p ~= "\\" then
+                q = not q and true or nil
+            end
+            if j ~= k then
+                r[i] = rep(id, j)
+                i, k = i + 1, j
+            end
+            r[i] = c
+        end
+        p, i = c, i + 1
+    end
+    return tconcat(r)
+end
 
 ------------------------------------------------------------------------
 --         Name:  Utils.isempty
@@ -451,7 +507,7 @@ function client.call(args)
 	local mod = assert(client[protocol], '"'..protocol..'" protocol support unavailable. Try soap.client.'..protocol..' = require"'..suggested_layers[protocol]..'" to enable it.')
 	local request = assert(mod.request, 'Could not find request function on module soap.client.'..protocol)
 	local one_or_nil, status_code, headers, receive_status = request(url)
-	local body = concat(tbody)
+	local body = tconcat(tbody)
 
   local function retriveMessage(response)
     local resp=jtr(response)
@@ -1333,7 +1389,7 @@ local function dump (prefix, a)
   local function toCSV (tt)
     local s = ""
     for _,p in ipairs(tt) do  s = s .. ", " .. escapeCSV(p) end
-    return string.sub(s, 2)      -- remove first comma
+    return sub(s, 2)      -- remove first comma
   end
 
   for i,v in pairs (a) do
