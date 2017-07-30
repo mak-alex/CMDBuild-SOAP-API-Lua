@@ -29,58 +29,146 @@
 
 require "luarocks.loader"
 require'LuaXML'
+local Log = require'lib.Log'
+local cjson = require'cjson'
+local pretty = require'lib.prettycjson'
 local XML = xml
 local CMDBuild = {}
 local mt = { __index = CMDBuild }
 local base64 = require'lib.base64'
-
+local argparse = require "lib.ArgParse"
 local assert, error, pairs, tonumber, tostring, type = assert, error, pairs, tonumber, tostring, type
 local table = require"table"
 local tconcat, tinsert, tremove = table.concat, table.insert, table.remove
 local string = require"string"
 local gsub, strfind, strformat = string.gsub, string.find, string.format
 local max = require"math".max
-local lom = require"lxp.lom"
-local parse = lom.parse
 local concat = require("table").concat
-
 local ltn12 = require("ltn12")
-
+local client = { http = require("socket.http"), }
+local xml_header_template = '<?xml version="1.0"?>'
+local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
+local mandatory_url = "Field `url' is mandatory"
+local invalid_args = "Supported SOAP versions: 1.1 and 1.2.  The presence of soapaction field is mandatory for SOAP version 1.1.\nsoapversion, soapaction = "
+local suggested_layers = { http = "socket.http", https = "ssl.https", }
 local tescape = {
-	['&'] = '&amp;',
-	['<'] = '&lt;',
-	['>'] = '&gt;',
-	['"'] = '&quot;',
-	["'"] = '&apos;',
+	['&'] = '&amp;', ['<'] = '&lt;', ['>'] = '&gt;', ['"'] = '&quot;', ["'"] = '&apos;',
 }
----------------------------------------------------------------------
--- Escape special characters.
----------------------------------------------------------------------
+local tunescape = {
+	['&amp;'] = '&', ['&lt;'] = '<', ['&gt;'] = '>', ['&quot;'] = '"', ['&apos;'] = "'",
+}
+local serialize
+local header_template = { tag = "soap:Header", }
+local envelope_template = {
+	tag = "soap:Envelope",
+	attr = { "xmlns:soap", "xmlns:soap1",
+		["xmlns:soap1"] = "http://soap.services.cmdbuild.org", -- to be filled
+		["xmlns:soap"] = "http://schemas.xmlsoap.org/soap/encoding/",
+	},
+	{
+		tag = "soap:Body",
+		[1] = {
+			tag = nil, -- must be filled
+			attr = {}, -- must be filled
+		},
+	}
+}
+local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
+local xmlns_soap12 = "http://www.w3.org/2003/05/soap-envelope"
+local Header = nil
+local wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+local wssu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+local PassText="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
+local Utils={}
+
+------------------------------------------------------------------------
+--         Name:  Utils.isempty
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  s - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Utils.isempty(s)
+  return (type(s) == "table" and next(s) == nil) or s == nil or s == ''
+end
+
+------------------------------------------------------------------------
+--         Name:  Utils.isin
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  tab - {+DESCRIPTION+} ({+TYPE+})
+--                what - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Utils.isin(tab,what)
+  if Utils.isempty(tab) then return false end
+  for i=1,#tab do if tab[i] == what then return true end end
+
+  return false
+end
+
+
+------------------------------------------------------------------------
+--         Name:  isempty
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  s - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+local function isempty(s)
+  return (type(s) == "table" and next(s) == nil) or s == nil or s == ''
+end
+
+------------------------------------------------------------------------
+--         Name:  isin
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  tab - {+DESCRIPTION+} ({+TYPE+})
+--                what - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+local function isin(tab,what)
+  if isempty(tab) then return false end
+  for i=1,#tab do if tab[i] == what then return true end end
+  return false
+end
+
+------------------------------------------------------------------------
+--         Name:  escape
+--      Purpose:  
+--  Description:  Escape special characters
+--   Parameters:  text - string to modify (string)
+--      Returns:  Modified string
+------------------------------------------------------------------------
+
 local function escape (text)
 	return (gsub (text, "([&<>'\"])", tescape))
 end
 
-local tunescape = {
-	['&amp;'] = '&',
-	['&lt;'] = '<',
-	['&gt;'] = '>',
-	['&quot;'] = '"',
-	['&apos;'] = "'",
-}
----------------------------------------------------------------------
--- Unescape special characters.
----------------------------------------------------------------------
+------------------------------------------------------------------------
+--         Name:  unescape
+--      Purpose:  
+--  Description:  Unescape special characters
+--   Parameters:  text - string to modify (string)
+--      Returns:  Modified string
+------------------------------------------------------------------------
+
 local function unescape (text)
 	return (gsub (text, "(&%a+%;)", tunescape))
 end
 
-local serialize
+------------------------------------------------------------------------
+--         Name:  attrs
+--      Purpose:  
+--  Description:  Serialize the table of attributes
+--   Parameters:  a - Table with the attributes of an element (table)
+--      Returns:  String representation of the object
+------------------------------------------------------------------------
 
----------------------------------------------------------------------
--- Serialize the table of attributes.
--- @param a Table with the attributes of an element.
--- @return String representation of the object.
----------------------------------------------------------------------
 local function attrs (a)
 	if not a then
 		return "" -- no attributes
@@ -104,11 +192,14 @@ local function attrs (a)
 	end
 end
 
----------------------------------------------------------------------
--- Serialize the children of an object.
--- @param obj Table with the object to be serialized.
--- @return String representation of the children.
----------------------------------------------------------------------
+------------------------------------------------------------------------
+--         Name:  contents
+--      Purpose:  
+--  Description:  Serialize the children of an object
+--   Parameters:  obj - Table with the object to be serialized (table)
+--      Returns:  String representation of the children
+------------------------------------------------------------------------
+
 local function contents (obj)
 	if not obj[1] then
 		return ""
@@ -121,11 +212,14 @@ local function contents (obj)
 	end
 end
 
----------------------------------------------------------------------
--- Serialize an object.
--- @param obj Table with the object to be serialized.
--- @return String with representation of the object.
----------------------------------------------------------------------
+------------------------------------------------------------------------
+--         Name:  serialize
+--      Purpose:  
+--  Description:  Serialize an object
+--   Parameters:  obj - Table with the object to be serialized (table)
+--      Returns:  String with representation of the object
+------------------------------------------------------------------------
+
 serialize = function (obj)
 	local tt = type(obj)
 	if tt == "string" then
@@ -141,10 +235,14 @@ serialize = function (obj)
 	end
 end
 
----------------------------------------------------------------------
--- @param attr Table of object's attributes.
--- @return String with the value of the namespace ("xmlns") field.
----------------------------------------------------------------------
+------------------------------------------------------------------------
+--         Name:  find_xmlns
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  attr - Table of object's attributes (table)
+--      Returns:  String with the value of the namespace ("xmlns") field.
+------------------------------------------------------------------------
+
 local function find_xmlns (attr)
 	for a, v in pairs (attr) do
 		if strfind (a, "xmlns", 1, 1) then
@@ -153,13 +251,16 @@ local function find_xmlns (attr)
 	end
 end
 
----------------------------------------------------------------------
--- Add header element (if it exists) to object.
--- Cleans old header element anyway.
----------------------------------------------------------------------
-local header_template = {
-	tag = "soap:Header",
-}
+------------------------------------------------------------------------
+--         Name:  insert_header
+--      Purpose:  
+--  Description:  Add header element (if it exists) to object
+--                Cleans old header element anywat
+--   Parameters:  obj - {+DESCRIPTION+} (table)
+--                header - template header (table)
+--      Returns:  header_template (table)
+------------------------------------------------------------------------
+
 local function insert_header (obj, header)
 	-- removes old header
 	if obj[2] then
@@ -171,35 +272,23 @@ local function insert_header (obj, header)
 	end
 end
 
-local envelope_template = {
-	tag = "soap:Envelope",
-	attr = { "xmlns:soap", "xmlns:soap1",
-		["xmlns:soap1"] = "http://soap.services.cmdbuild.org", -- to be filled
-		["xmlns:soap"] = "http://schemas.xmlsoap.org/soap/encoding/",
-	},
-	{
-		tag = "soap:Body",
-		[1] = {
-			tag = nil, -- must be filled
-			attr = {}, -- must be filled
-		},
-	}
-}
-local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
-local xmlns_soap12 = "http://www.w3.org/2003/05/soap-envelope"
 
----------------------------------------------------------------------
--- Converts a LuaExpat table into a SOAP message.
--- @param args Table with the arguments, which could be:
--- namespace: String with the namespace of the elements.
--- method: String with the method's name;
--- entries: Table of SOAP elements (LuaExpat's format);
--- header: Table describing the header of the SOAP envelope (optional);
--- internal_namespace: String with the optional namespace used
+------------------------------------------------------------------------
+--         Name:  encode
+--      Purpose:  
+--  Description:  Converts a LuaXml table into a SOAP message
+--   Parameters:  args - Table with the arguments, which could be: (table)
+--              namespace: String with the namespace of the elements.
+--              method: String with the method's name;
+--              entries: Table of SOAP elements (LuaExpat's format);
+--              header: Table describing the header of the SOAP envelope (optional);
+--              internal_namespace: String with the optional namespace used
 --	as a prefix for the method name (default = "");
--- soapversion: Number of SOAP version (default = 1.1);
--- @return String with SOAP envelope element.
----------------------------------------------------------------------
+--              soapversion: Number of SOAP version (default = 1.1);
+--                
+--      Returns:  String with SOAP envelope element
+------------------------------------------------------------------------
+
 local function encode (args)
 	if tonumber(args.soapversion) == 1.2 then
 		envelope_template.attr["xmlns:soap"] = xmlns_soap12
@@ -224,13 +313,71 @@ local function encode (args)
 	return serialize (envelope_template)
 end
 
--- Iterates over the children of an object.
+------------------------------------------------------------------------
+--         Name:  decode
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  xmltab - SOAP response (string)
+--      Returns:  Table
+------------------------------------------------------------------------
+
+local function decode(xmltab)
+  local outtab={}
+  outtab["Id"]={}
+
+  for i=1,#xmltab
+  do
+    id=xmltab[i]:find("ns2:id")
+    if id ~= nil
+    then
+      id=id[1]
+      for j=1, #xmltab[i]
+      do
+        local attrList=xmltab[i][j]:find("ns2:attributeList")
+        if attrList ~= nil
+        then
+          local key=attrList:find("ns2:name")
+          local value=attrList:find("ns2:value") or ""
+          local code=attrList:find("ns2:code") or ""
+          if key ~= nil and not isin(ignoreFields,key[1])
+          then
+            key = key[1]
+            value = value[1]
+            code = code[1]
+
+            if outtab.Id[tostring(id)] == nil
+            then
+              outtab.Id[tostring(id)]={}
+            end
+            if code == nil
+            then
+              outtab.Id[tostring(id)][key]=value
+            else
+              outtab.Id[tostring(id)][key]={["value"]=value,["code"]=code}
+            end
+          end
+        end
+      end
+      if onCardLoad ~= nil
+      then
+        onCardLoad(outtab,tostring(id))
+      end
+    end
+  end
+  return outtab
+end
+
+------------------------------------------------------------------------
+--         Name:  list_children
+--      Purpose:  
+--  Description:  Iterates over the children of an object.
 -- It will ignore any text, so if you want all of the elements, use ipairs(obj).
--- @param obj Table (LOM format) representing the XML object.
--- @param tag String with the matching tag of the children
---	or nil to match only structured children (single strings are skipped).
--- @return Function to iterate over the children of the object
---	which returns each matching child.
+--   Parameters:  obj - Table (LOM format) representing the XML object (table)
+--                tag - String with the matching tag of the children or
+-- nil to match only structured children (single strings are skipped) (string)
+--      Returns:  Function to iterate over the children of the object
+-- which returns each matching child
+------------------------------------------------------------------------
 
 local function list_children (obj, tag)
 	local i = 0
@@ -248,57 +395,6 @@ local function list_children (obj, tag)
 	end
 end
 
----------------------------------------------------------------------
--- Converts a SOAP message into Lua objects.
--- @param doc String with SOAP document.
--- @return String with namespace, String with method's name and
---	Table with SOAP elements (LuaExpat's format).
----------------------------------------------------------------------
-local function decode (doc)
-	local obj = assert (parse (doc))
-	local ns = obj.tag:match ("^(.-):")
-	assert (obj.tag == ns..":Envelope", "Not a SOAP Envelope: "..
-		tostring(obj.tag))
-	local lc = list_children (obj)
-	local o = lc ()
-	-- Skip SOAP:Header
-	while o and (o.tag == ns..":Header" or o.tag == "SOAP-ENV:Header") do
-		o = lc ()
-	end
-	if o and (o.tag == ns..":Body" or o.tag == "SOAP-ENV:Body") then
-		obj = list_children (o)()
-	else
-		error ("Couldn't find SOAP Body!")
-	end
-
-	local namespace = find_xmlns (obj.attr)
-	local method = obj.tag:match ("%:([^:]*)$") or obj.tag
-	local entries = {}
-	for i = 1, #obj do
-		entries[i] = obj[i]
-	end
-	return namespace, method, entries
-end
-
-local client = {
-	_COPYRIGHT = "Copyright (C) 2004-2013 Kepler Project",
-	_DESCRIPTION = "LuaSOAP provides a very simple API that convert Lua tables to and from XML documents",
-	_VERSION = "LuaSOAP 3.0 client",
-
-	-- Support for SOAP over HTTP is default and only depends on LuaSocket
-	http = require("socket.http"),
-}
-
-local xml_header_template = '<?xml version="1.0"?>'
-
-local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
-local mandatory_url = "Field `url' is mandatory"
-local invalid_args = "Supported SOAP versions: 1.1 and 1.2.  The presence of soapaction field is mandatory for SOAP version 1.1.\nsoapversion, soapaction = "
-
-local suggested_layers = {
-	http = "socket.http",
-	https = "ssl.https",
-}
 
 ---------------------------------------------------------------------
 -- Call a remote method.
@@ -375,23 +471,7 @@ function client.call(args)
 
 	return retriveMessage(tbody)
 end
-local Header = nil
-local wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-local wssu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
-local PassText="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
 
-local Utils={}
-
-function Utils.isempty(s)
-  return (type(s) == "table" and next(s) == nil) or s == nil or s == ''
-end
-
-function Utils.isin(tab,what)
-  if Utils.isempty(tab) then return false end
-  for i=1,#tab do if tab[i] == what then return true end end
-
-  return false
-end
 
 ------------------------------------------------------------------------
 --         Name:  CMDBuild:new
@@ -402,20 +482,21 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:new(credentials, verbose, _debug)
+  Log.info('Создан новый инстанс', verbose)
   Header = {
     tag = "wsse:Security",
     attr = { ["xmlns:wsse"] = wsse },
     {
       tag = "wsse:UsernameToken",
       attr = { ["xmlns:wssu"] = wssu },
-      { tag = "wsse:Username", credentials.username },
-      { tag = "wsse:Password", attr = { ["Type"] = PassText}, credentials.password }
+      { tag = "wsse:Username", credentials.username or credentials[1] },
+      { tag = "wsse:Password", attr = { ["Type"] = PassText}, credentials.password or credentials[2] }
     }
   }
   return setmetatable(
     {
-      url = credentials.url or 'http://'..credentials.ip..'/cmdbuild/services/soap/Webservices',
-      verbose = verbose or true,
+      url = credentials.url or 'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
+      verbose = verbose or false,
       _debug = _debug or false
     }, mt  
   )
@@ -1065,7 +1146,7 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
   local attributes = {}
   local orders = {}
   local _limit = {}
-  
+  Log.debug(string.format('Создаем запрос получения карт для класса: %s', classname), self._debug)
   local request = {
     url = self.url,
     soapaction = '',
@@ -1083,6 +1164,13 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
       }
     end
     table.insert(request.entries, attributes_list)
+    Log.debug(
+      string.format('В запрос получения карт для класса: %s, добавлен список аттрибутов: %s', 
+        classname, 
+        tostring(unpack(attributes_list))
+      ), 
+      self._debug
+    )
   end
 
   if filter or filter_sq_operator then
@@ -1096,6 +1184,15 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
         }
       }
       table.insert(request.entries, filters)
+      Log.debug(
+        string.format('В запрос получения карт для класса: %s, добавлен фильтр: {name=\'%s\', operator=\'%s\', value=\'%s\'}', 
+          classname, 
+          filter.name, 
+          filter.operator, 
+          tostring(filter.value)
+        ), 
+        self._debug
+      )
     end
 
     if not filter and filter_sq_operator then
@@ -1121,9 +1218,16 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
           }
         end
       end
+      table.insert(request.entries, filters)
+      log.debug(
+        string.format('в запрос получения карт для класса: %s, добавлен множественный фильтр', 
+          classname
+        ), 
+        self._debug
+      )
     end
-    table.insert(request.entries, filters)
   end
+
   if order_type then
     orders = { tag = "soap1:orderType",
       { tag = "soap1:columnName", order_type.columnName },
@@ -1134,6 +1238,13 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
 
   if limit then
     table.insert(request.entries, { tag = "soap:limit", limit })
+    log.debug(
+      string.format('в запрос получения карт для класса: %s, добавлен лимит на выгружемое кол-во карт: %d', 
+        classname,
+        limit
+      ), 
+      self._debug
+    )
   end
 
   if offset then
@@ -1157,7 +1268,25 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
     table.insert(request.entries, _cql_query)
   end
 
+  Log.info(
+    string.format('Попытка получить карты для класса: %s', classname),
+    self.verbose
+  )
+  
   local resp = client.call(request)
+  if not resp then
+    Log.warn(
+      string.format("Не удалось получить карты для класса: %s", classname), 
+      self.verbose
+    )
+    return
+  else
+    Log.info(
+      string.format('Карты для класса: %s успешно выгружены', classname),
+      self.verbose
+    )
+  end
+
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -1216,40 +1345,39 @@ local function dump (prefix, a)
   end
 end
 
-
-if (arg ~= nil) then
-  local func = 'enc'
-  for n,v in ipairs(arg) do
-    if (n > 0) then
-      if (v == "-h") then dump("CMDBuild", CMDBuild) break end
-    end
-  end
-end
-
-local argparse = require "lib.ArgParse"
-
 local parser = argparse("script", "An example.")
 parser:flag("-l --list", "List all methods")
-parser:option("-c --credentials", "Set username and password for authorization in CMDBuild"):args(2)
+parser:option("-u --username", "username")
+parser:option("-p --password", "password")
 parser:option("-i --ip", "IP address for connect in CMDBuild")
 parser:option("-g --get_card_list", "Get card list, ex('Hosts')", nil)
+parser:option("-c --card_id", "id", nil)
 parser:option("-f --filter", "ex.(name operator value)"):args("*")
+parser:option("-F --format", "Format output xml or json", 'json')
+parser:flag'-v --verbose'
+parser:flag'-d --debug'
 
 local args = parser:parse()
 if args.list then dump("CMDBuild", CMDBuild) end
-if args.credentials and args.ip then
-  local cmdbuild = CMDBuild:new{
-    username = args.credentials[1],
-    password = args.credentials[2],
-    ip = args.ip
-  }
+if args.username and args.password and args.ip then
+  local cmdbuild = CMDBuild:new({ args.username, args.password, args.ip }, args.verbose, args.debug)
+  
   if args.get_card_list then
-    local filter
+    local filter, resp = nil, nil
     if args.filter then
-      filter = { name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
+      filter={ name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
     end
-    local resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
-    print(resp)
+
+    if args.card_id then
+      resp = cmdbuild:get_card(args.get_card_list, args.card_id)
+    else
+      resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
+    end
+    if args.format == 'xml' then
+      print(resp)
+    else
+      print(pretty(decode(resp)))
+    end
   end
 end
 
