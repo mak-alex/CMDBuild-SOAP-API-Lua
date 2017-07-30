@@ -5,7 +5,7 @@
 --
 --        Usage:  ./CMDBuild.lua
 --
---  Description:  Библиотека для работы с CMDBuild SOAP API
+-- @description:  Библиотека для работы с CMDBuild SOAP API
 --
 --      Options:  ---
 -- Requirements:  LuaXML, LuaSocket, LuaSec, lib/{base64.lua,ArgParse.lua,Log.lua}
@@ -81,15 +81,15 @@ local mt = { __index = CMDBuild }
 local Utils={}
 
 ------------------------------------------------------------------------
---         Name:  pretty
---      Purpose:  
---  Description:  cjson.encode pretty
---   Parameters:  dt - {+DESCRIPTION+} ({+TYPE+})
---                lf - {+DESCRIPTION+} ({+TYPE+})
---                id - {+DESCRIPTION+} ({+TYPE+})
---                ac - {+DESCRIPTION+} ({+TYPE+})
---                ec - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  pretty string
+-- @name:  pretty
+-- @purpose:  
+-- @description:  cjson.encode pretty
+-- @params: dt - {+DESCRIPTION+} ({+TYPE+})
+-- @params: lf - {+DESCRIPTION+} ({+TYPE+})
+-- @params: id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: ac - {+DESCRIPTION+} ({+TYPE+})
+-- @params: ec - {+DESCRIPTION+} ({+TYPE+})
+-- @returns: pretty string
 ------------------------------------------------------------------------
 
 pretty = function(dt, lf, id, ac, ec)
@@ -136,11 +136,11 @@ pretty = function(dt, lf, id, ac, ec)
 end
 
 ------------------------------------------------------------------------
---         Name:  Utils.isempty
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  s - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  Utils.isempty
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params:  s - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function Utils.isempty(s)
@@ -148,12 +148,12 @@ function Utils.isempty(s)
 end
 
 ------------------------------------------------------------------------
---         Name:  Utils.isin
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  tab - {+DESCRIPTION+} ({+TYPE+})
+-- @name:  Utils.isin
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params:  tab - {+DESCRIPTION+} ({+TYPE+})
 --                what - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function Utils.isin(tab,what)
@@ -165,11 +165,11 @@ end
 
 
 ------------------------------------------------------------------------
---         Name:  isempty
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  s - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  isempty
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params:  s - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 local function isempty(s)
@@ -177,12 +177,12 @@ local function isempty(s)
 end
 
 ------------------------------------------------------------------------
---         Name:  isin
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  tab - {+DESCRIPTION+} ({+TYPE+})
+-- @name:  isin
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params:  tab - {+DESCRIPTION+} ({+TYPE+})
 --                what - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 local function isin(tab,what)
@@ -192,11 +192,11 @@ local function isin(tab,what)
 end
 
 ------------------------------------------------------------------------
---         Name:  escape
---      Purpose:  
---  Description:  Escape special characters
---   Parameters:  text - string to modify (string)
---      Returns:  Modified string
+-- @name:  escape
+-- @purpose:  
+-- @description:  Escape special characters
+-- @params:  text - string to modify (string)
+-- @returns:  Modified string
 ------------------------------------------------------------------------
 
 local function escape (text)
@@ -204,11 +204,11 @@ local function escape (text)
 end
 
 ------------------------------------------------------------------------
---         Name:  unescape
---      Purpose:  
---  Description:  Unescape special characters
---   Parameters:  text - string to modify (string)
---      Returns:  Modified string
+-- @name:  unescape
+-- @purpose:  
+-- @description:  Unescape special characters
+-- @params:  text - string to modify (string)
+-- @returns:  Modified string
 ------------------------------------------------------------------------
 
 local function unescape (text)
@@ -216,11 +216,11 @@ local function unescape (text)
 end
 
 ------------------------------------------------------------------------
---         Name:  attrs
---      Purpose:  
---  Description:  Serialize the table of attributes
---   Parameters:  a - Table with the attributes of an element (table)
---      Returns:  String representation of the object
+-- @name:  attrs
+-- @purpose:  
+-- @description:  Serialize the table of attributes
+-- @params:  a - Table with the attributes of an element (table)
+-- @returns:  String representation of the object
 ------------------------------------------------------------------------
 
 local function attrs (a)
@@ -247,11 +247,11 @@ local function attrs (a)
 end
 
 ------------------------------------------------------------------------
---         Name:  contents
---      Purpose:  
---  Description:  Serialize the children of an object
---   Parameters:  obj - Table with the object to be serialized (table)
---      Returns:  String representation of the children
+-- @name:  contents
+-- @purpose:  
+-- @description:  Serialize the children of an object
+-- @params:  obj - Table with the object to be serialized (table)
+-- @returns:  String representation of the children
 ------------------------------------------------------------------------
 
 local function contents (obj)
@@ -267,11 +267,11 @@ local function contents (obj)
 end
 
 ------------------------------------------------------------------------
---         Name:  serialize
---      Purpose:  
---  Description:  Serialize an object
---   Parameters:  obj - Table with the object to be serialized (table)
---      Returns:  String with representation of the object
+-- @name:  serialize
+-- @purpose:  
+-- @description:  Serialize an object
+-- @params:  obj - Table with the object to be serialized (table)
+-- @returns:  String with representation of the object
 ------------------------------------------------------------------------
 
 serialize = function (obj)
@@ -290,11 +290,11 @@ serialize = function (obj)
 end
 
 ------------------------------------------------------------------------
---         Name:  find_xmlns
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  attr - Table of object's attributes (table)
---      Returns:  String with the value of the namespace ("xmlns") field.
+-- @name:  find_xmlns
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params:  attr - Table of object's attributes (table)
+-- @returns:  String with the value of the namespace ("xmlns") field.
 ------------------------------------------------------------------------
 
 local function find_xmlns (attr)
@@ -306,13 +306,13 @@ local function find_xmlns (attr)
 end
 
 ------------------------------------------------------------------------
---         Name:  insert_header
---      Purpose:  
---  Description:  Add header element (if it exists) to object
+-- @name:  insert_header
+-- @purpose:  
+-- @description:  Add header element (if it exists) to object
 --                Cleans old header element anywat
---   Parameters:  obj - {+DESCRIPTION+} (table)
+-- @params:  obj - {+DESCRIPTION+} (table)
 --                header - template header (table)
---      Returns:  header_template (table)
+-- @returns:  header_template (table)
 ------------------------------------------------------------------------
 
 local function insert_header (obj, header)
@@ -328,10 +328,10 @@ end
 
 
 ------------------------------------------------------------------------
---         Name:  encode
---      Purpose:  
---  Description:  Converts a LuaXml table into a SOAP message
---   Parameters:  args - Table with the arguments, which could be: (table)
+-- @name:  encode
+-- @purpose:  
+-- @description:  Converts a LuaXml table into a SOAP message
+-- @params:  args - Table with the arguments, which could be: (table)
 --              namespace: String with the namespace of the elements.
 --              method: String with the method's name;
 --              entries: Table of SOAP elements (LuaExpat's format);
@@ -340,7 +340,7 @@ end
 --	as a prefix for the method name (default = "");
 --              soapversion: Number of SOAP version (default = 1.1);
 --                
---      Returns:  String with SOAP envelope element
+-- @returns:  String with SOAP envelope element
 ------------------------------------------------------------------------
 
 local function encode (args)
@@ -368,11 +368,11 @@ local function encode (args)
 end
 
 ------------------------------------------------------------------------
---         Name:  decode
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  xmltab - SOAP response (string)
---      Returns:  Table
+-- @name:  decode
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params:  xmltab - SOAP response (string)
+-- @returns:  Table
 ------------------------------------------------------------------------
 
 local function decode(xmltab)
@@ -422,14 +422,14 @@ local function decode(xmltab)
 end
 
 ------------------------------------------------------------------------
---         Name:  list_children
---      Purpose:  
---  Description:  Iterates over the children of an object.
+-- @name:  list_children
+-- @purpose:  
+-- @description:  Iterates over the children of an object.
 -- It will ignore any text, so if you want all of the elements, use ipairs(obj).
---   Parameters:  obj - Table (LOM format) representing the XML object (table)
+-- @params:  obj - Table (LOM format) representing the XML object (table)
 --                tag - String with the matching tag of the children or
 -- nil to match only structured children (single strings are skipped) (string)
---      Returns:  Function to iterate over the children of the object
+-- @returns:  Function to iterate over the children of the object
 -- which returns each matching child
 ------------------------------------------------------------------------
 
@@ -450,11 +450,11 @@ local function list_children (obj, tag)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:new
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  credentials - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:new
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params:  credentials - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:new(credentials, verbose, _debug)
@@ -480,17 +480,17 @@ function CMDBuild:new(credentials, verbose, _debug)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:createLookup
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  lookup_type - {+DESCRIPTION+} ({+TYPE+})
---                code - {+DESCRIPTION+} ({+TYPE+})
---                description - {+DESCRIPTION+} ({+TYPE+})
---                id - {+DESCRIPTION+} ({+TYPE+})
---                notes - {+DESCRIPTION+} ({+TYPE+})
---                parent_id - {+DESCRIPTION+} ({+TYPE+})
---                position - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:createLookup
+-- @purpose:  
+-- @description:  It creates in the database a new heading of a data Lookup list containing information inserted in the “Lookup” object.  It returns the "id" identification attribute.
+-- @params: lookup_type - Name of the Lookup list which includes the current heading (string)
+-- @params: code - Code of the Lookup heading (one single heading of a Lookup list).(string)
+-- @params: description - Description of the Lookup heading (one single heading of a Lookup list).(string)
+-- @params: id - Lookup identification, it is automatically assigned by the database (number)
+-- @params: notes - Notes connected with the Lookup heading (string)
+-- @params: parent_id - Identification of the parent Lookup in the current heading (if applicable) (number)
+-- @params: position - Location of the Lookup heading in the related Lookup list (number)
+-- @returns: id (integer)
 ------------------------------------------------------------------------
 
 function CMDBuild:createLookup(lookup_type, code, description, id, notes, parent_id, position)
@@ -520,11 +520,13 @@ function CMDBuild:createLookup(lookup_type, code, description, id, notes, parent
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:deleteLookup
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:deleteLookup
+-- @purpose:  
+-- @description:  It deletes logically - in the identified class -
+--  the pre-existing card with the identified "id".
+--  It returns “true” if the operation went through.
+-- @params:  lookup_id - {+DESCRIPTION+} (number)
+-- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteLookup(lookup_id)
@@ -545,18 +547,143 @@ function CMDBuild:deleteLookup(lookup_id)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:createRelation
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  domain_name - {+DESCRIPTION+} ({+TYPE+})
---                class1name - {+DESCRIPTION+} ({+TYPE+})
---                card1Id - {+DESCRIPTION+} ({+TYPE+})
---                class2name - {+DESCRIPTION+} ({+TYPE+})
---                card2Id - {+DESCRIPTION+} ({+TYPE+})
---                status - {+DESCRIPTION+} ({+TYPE+})
---                begin_date - {+DESCRIPTION+} ({+TYPE+})
---                end_date - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:updateLookup
+-- @purpose:  
+-- @description:  It updates the pre-existing Lookup heading.  It returns “true” if the operation went through.
+-- @params: lookup_type - Name of the Lookup list which includes the current heading (string)
+-- @params: code - Code of the Lookup heading (one single heading of a Lookup list).(string)
+-- @params: description - Description of the Lookup heading (one single heading of a Lookup list).(string)
+-- @params: id - Lookup identification, it is automatically assigned by the database (number)
+-- @params: notes - Notes connected with the Lookup heading (string)
+-- @params: parent_id - Identification of the parent Lookup in the current heading (if applicable) (number)
+-- @params: position - Location of the Lookup heading in the related Lookup list (number)
+-- @returns: id (integer)
+-- @returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function CMDBuild:updateLookup(lookup_type, code, description, id, notes, parent_id, position)
+  local request = {
+    url = self.url,
+    soapaction = '',
+    method = "soap1:updateLookup",
+    header = Header, 
+    entries = {
+      { tag = "soap1:lookup",	
+        { tag = "soap1:code", code },
+        { tag = "soap1:description", description }
+      }
+    }
+  }
+  if id then table.insert(request.entries[1], { tag = "soap1:id", id}) end
+  if notes then table.insert(request.entries[1], { tag = "soap1:notes", notes}) end
+  if parent_id and position then 
+    table.insert(request.entries[1], { tag = "soap1:parent" })
+    table.insert(request.entries[1], { tag = "soap1:parentId", parent_id })
+    table.insert(request.entries[1], { tag = "soap1:position", position })
+  end
+  table.insert(request.entries[1], { tag = "soap1:type", lookup_type})
+
+  local resp = self:call(request)
+  return XML.eval(resp):find'ns2:return'
+end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:getLookupList
+-- @purpose:  
+-- @description:  It returns a complete list of Lookup values
+--  corresponding to the specified "type".
+--  If the "value" parameter is specified, only the
+--  related heading is returned.
+--  If “parentList” takes the “True” value, it returns
+--  the complete hierarchy available for the
+--  multilevel Lookup lists.
+-- @params: lookup_type - Name of the Lookup list which includes the current heading(string)
+-- @params: value - {+DESCRIPTION+} ({+TYPE+})
+-- @params: need_parent_list - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function CMDBuild:getLookupList(lookup_type, value, need_parent_list)
+  local request = {
+    url = self.url,
+    soapaction = '',
+    method = "soap1:getLookupList",
+    header = Header,
+    entries = {
+      { tag = "soap1:type", lookup_type },
+    }
+  }
+
+  if value then table.insert(request.entries, { tag = "soap1:value", value}) end
+  if need_parent_list then table.insert(request.entries, {tag = "soap1:parentList", true}) end
+  
+  local resp = self:call(request)
+  return XML.eval(resp):find'ns2:return'
+end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:getLookupById
+-- @purpose:  
+-- @description:  It returns the Lookup heading which shows the specified "Id" identification
+-- @params:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function CMDBuild:getLookupById(lookup_id)
+  local request = {
+    url = self.url,
+    soapaction = '',
+    method = "soap1:getLookupById",
+    header = Header,
+    entries = {
+      { tag = "soap1:id", lookup_id },
+    }
+  }
+  
+  local resp = self:call(request)
+  return XML.eval(resp):find'ns2:return'
+end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:getLookupTranslationById
+-- @purpose:  
+-- @description:  Only model from DBIC
+-- @params:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function CMDBuild:getLookupTranslationById(lookup_id)
+  local request = {
+    url = self.url,
+    soapaction = '',
+    method = "soap1:callFunction",
+    header = Header,
+    entries = {
+      { tag = "soap1:functionName", "dbic_get_lookup_trans_by_id" },
+      { tag = "soap1:params",
+        { tag = "soap1:name", "itid" },
+        { tag = "soap1:value", lookup_id}
+      }
+    }
+  }
+  
+  local resp = self:call(request)
+  return XML.eval(resp):find'ns2:return'
+end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:createRelation
+-- @purpose:  
+-- @description:  It creates in the database a new relation between the pair of cards specified in the "Relation" object.  It returns “true” if the operation went through.
+-- @params: domain_name - Domain used for the relation. (string)
+-- @params: class1name - ClassName of the first card taking part in the relation (string)
+-- @params: card1Id - Identifier of the first card which takes part in the relation (number)
+-- @params: class2name - ClassName of the second card which takes part in the relation. (string)
+-- @params: card2Id - Identifier of the second card which takes part in the relation. (number)
+-- @params: status - Relation status ('A' = active, 'N' = removed) (string)
+-- @params: begin_date - Date when the relation was created (format YYYY-MM-DDThh:mm:ssZ) (date)
+-- @params: end_date - Date when the relation was created (format YYYY-MM-DDThh:mm:ssZ) (date)
+-- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:createRelation(domain_name, class1name, card1Id, class2name, card2Id, status, begin_date, end_date)
@@ -582,18 +709,18 @@ function CMDBuild:createRelation(domain_name, class1name, card1Id, class2name, c
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:deleteRelation
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  domain_name - {+DESCRIPTION+} ({+TYPE+})
---                class1name - {+DESCRIPTION+} ({+TYPE+})
---                card1Id - {+DESCRIPTION+} ({+TYPE+})
---                class2name - {+DESCRIPTION+} ({+TYPE+})
---                card2Id - {+DESCRIPTION+} ({+TYPE+})
---                status - {+DESCRIPTION+} ({+TYPE+})
---                begin_date - {+DESCRIPTION+} ({+TYPE+})
---                end_date - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:deleteRelation
+-- @purpose:  
+-- @description:  It deletes the existing relation between the pair of cards specified in the "Relation" object.  It returns “true” if the operation went through.
+-- @params: domain_name - Domain used for the relation. (string)
+-- @params: class1name - ClassName of the first card taking part in the relation (string)
+-- @params: card1Id - Identifier of the first card which takes part in the relation (number)
+-- @params: class2name - ClassName of the second card which takes part in the relation. (string)
+-- @params: card2Id - Identifier of the second card which takes part in the relation. (number)
+-- @params: status - Relation status ('A' = active, 'N' = removed) (string)
+-- @params: begin_date - Date when the relation was created (format YYYY-MM-DDThh:mm:ssZ) (date)
+-- @params: end_date - Date when the relation was created (format YYYY-MM-DDThh:mm:ssZ) (date)
+-- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteRelation(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
@@ -619,13 +746,13 @@ function CMDBuild:deleteRelation(domain_name, class1name, card1id, class2name, c
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:getRelationList
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  domain_name - {+DESCRIPTION+} ({+TYPE+})
---                classname - {+DESCRIPTION+} ({+TYPE+})
---                id - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:getRelationList
+-- @purpose:  
+-- @description:  It returns the complete list of relations of the card specified for the specified domain.
+-- @params:  domain_name - Domain used for the relation. (string)
+-- @params:  classname - ClassName of the first card taking part in the relation (string)
+-- @params:  id - Identifier of the first card which takes part in the relation (number)
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:getRelationList(domain_name, classname, id)
@@ -644,6 +771,21 @@ function CMDBuild:getRelationList(domain_name, classname, id)
   local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:getRelationHistory
+-- @purpose:  
+-- @description:  It returns the relation history of a card starting from a "Relation" object in which only "Class1Name" and "Card1Id" were defined.
+-- @params: domain_name - Domain used for the relation. (string)
+-- @params: class1name - ClassName of the first card taking part in the relation (string)
+-- @params: card1Id - Identifier of the first card which takes part in the relation (number)
+-- @params: class2name - ClassName of the second card which takes part in the relation. (string)
+-- @params: card2Id - Identifier of the second card which takes part in the relation. (number)
+-- @params: status - Relation status ('A' = active, 'N' = removed) (string)
+-- @params: begin_date - Date when the relation was created (format YYYY-MM-DDThh:mm:ssZ) (date)
+-- @params: end_date - Date when the relation was created (format YYYY-MM-DDThh:mm:ssZ) (date)
+-- @returns:  table
+------------------------------------------------------------------------
 
 function CMDBuild:getRelationHistory(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
   local request = {
@@ -667,92 +809,16 @@ function CMDBuild:getRelationHistory(domain_name, class1name, card1id, class2nam
   return xml.eval(resp):find'ns2:return'
 end
 
-------------------------------------------------------------------------
---         Name:  CMDBuild:getLookupList
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  lookup_type - {+DESCRIPTION+} ({+TYPE+})
---                value - {+DESCRIPTION+} ({+TYPE+})
---                need_parent_list - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
-------------------------------------------------------------------------
-
-function CMDBuild:getLookupList(lookup_type, value, need_parent_list)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getLookupList",
-    header = Header,
-    entries = {
-      { tag = "soap1:type", lookup_type },
-    }
-  }
-
-  if value then table.insert(request.entries, { tag = "soap1:value", value}) end
-  if need_parent_list then table.insert(request.entries, {tag = "soap1:parentList", true}) end
-  
-  local resp = self:call(request)
-  return XML.eval(resp):find'ns2:return'
-end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:getLookupById
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
-------------------------------------------------------------------------
-
-function CMDBuild:getLookupById(lookup_id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getLookupById",
-    header = Header,
-    entries = {
-      { tag = "soap1:id", lookup_id },
-    }
-  }
-  
-  local resp = self:call(request)
-  return XML.eval(resp):find'ns2:return'
-end
-------------------------------------------------------------------------
---         Name:  CMDBuild:getLookupTranslationById
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
-------------------------------------------------------------------------
-
-function CMDBuild:getLookupTranslationById(lookup_id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:callFunction",
-    header = Header,
-    entries = {
-      { tag = "soap1:functionName", "dbic_get_lookup_trans_by_id" },
-      { tag = "soap1:params",
-        { tag = "soap1:name", "itid" },
-        { tag = "soap1:value", lookup_id}
-      }
-    }
-  }
-  
-  local resp = self:call(request)
-  return XML.eval(resp):find'ns2:return'
-end
-
-------------------------------------------------------------------------
---         Name:  CMDBuild:startWorkflow
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
---                attributes_list - {+DESCRIPTION+} ({+TYPE+})
---                metadata - {+DESCRIPTION+} ({+TYPE+})
---                complete_task - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:startWorkflow
+-- @purpose:  
+-- @description:  It starts a new instance of the workflow described in the specified "Card".  If the “CompleteTask” parameter takes the “true” value, the process is advanced to the following step.  It returns the "id" identification attribute.
+-- @params: classname - ClassName of the first card taking part in the relation (string)
+-- @params: attributes_list - {+DESCRIPTION+} ({+TYPE+})
+-- @params: metadata - {+DESCRIPTION+} ({+TYPE+})
+-- @params: complete_task - {+DESCRIPTION+} (boolean)
+-- @returns:  id (number)
 ------------------------------------------------------------------------
 
 function CMDBuild:startWorkflow(classname, attributes_list, metadata, complete_task)
@@ -800,13 +866,21 @@ function CMDBuild:startWorkflow(classname, attributes_list, metadata, complete_t
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:updateWorkflow
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  process_id - {+DESCRIPTION+} ({+TYPE+})
---                attributes_list - {+DESCRIPTION+} ({+TYPE+})
---                complete_task - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:updateWorkflow
+-- @purpose:  
+-- @description:  It updates the information of the card in the
+--  specified process instance.
+--  If the “CompleteTask” parameter takes the
+--  “true” value, the process is advanced to the
+--  following step.
+--  It returns “true” if the operation went through
+-- @params:  process_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
+-- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
+-- The list includes also the ClassId (not the className)(table) 
+-- ex.: {name='',value=''}
+-- @params: complete_task - boolean
+-- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:updateWorkflow(process_id, attributes_list, complete_task)
@@ -844,16 +918,16 @@ function CMDBuild:updateWorkflow(process_id, attributes_list, complete_task)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:uploadAttachment
---      Purpose:  
---  Description:  
---   Parameters:  classname - {+DESCRIPTION+} (string)
---                card_id - {+DESCRIPTION+} (number)
---                file - {+DESCRIPTION+} (string)
---                filename - {+DESCRIPTION+} (string)
---                category - {+DESCRIPTION+} (string)
---                description - {+DESCRIPTION+} (string)
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:uploadAttachment
+-- @purpose:  
+-- @description:  It uploads the specified file in the DMS Alfresco and the relating connection to the CMDBuild card belonging to the “className” class and having the “id” identification.  It returns “true” if the operation went through.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} (number)
+-- @params: file - {+DESCRIPTION+} (string)
+-- @params: filename - Attachment name with extension (string)
+-- @params: category - Category which the attachment belongs to (from proper Lookup list). (string)
+-- @params: description - Description related to the attachment (string)
+-- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:uploadAttachment(classname, card_id, file, filename, category, description)
@@ -882,6 +956,17 @@ function CMDBuild:uploadAttachment(classname, card_id, file, filename, category,
   return xml.eval(resp):find'ns2:return'
 end
 
+------------------------------------------------------------------------
+-- @name:  CMDBuild:downloadAttachment
+-- @purpose:  
+-- @description:  It returns the file enclosed in the specified
+--  card, which has the specified name.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params filename - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  base64 (string)
+------------------------------------------------------------------------
+
 function CMDBuild:downloadAttachment(classname, card_id, filename)
   local request = {
     url = self.url,
@@ -899,6 +984,19 @@ function CMDBuild:downloadAttachment(classname, card_id, filename)
   return xml.eval(resp):find'ns2:return'
 end
 
+------------------------------------------------------------------------
+-- @name:  CMDBuild:deleteAttachment
+-- @purpose:  
+-- @description:  It removes from the DMS Alfresco the file
+--  enclosed in the specified card, which has the
+--  specified name.
+--  It returns “true” if the operation went through.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: filename - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  boolean
+------------------------------------------------------------------------
+
 function CMDBuild:deleteAttachment(classname, card_id, filename)
   local request = {
     url = self.url,
@@ -915,6 +1013,20 @@ function CMDBuild:deleteAttachment(classname, card_id, filename)
   local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:updateAttachment
+-- @purpose:  
+-- @description:  It updates the description of the file enclosed
+--  in the specified card, which has the specified
+--  name.
+--  It returns “true” if the operation went through.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: filename - {+DESCRIPTION+} ({+TYPE+})
+-- @params: description - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  boolean
+------------------------------------------------------------------------
 
 function CMDBuild:updateAttachment(classname, card_id, filename, description)
   local request = {
@@ -935,13 +1047,16 @@ function CMDBuild:updateAttachment(classname, card_id, filename, description)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:createCard
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
---                attributes_list - {+DESCRIPTION+} ({+TYPE+})
---                metadata - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+--  @name: CMDBuild:createCard
+--  @urpose:  
+--  @description:  It creates in the database a new card, containing the information inserted in the "Card" object.  It returns the "id" identification attribute.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
+-- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
+-- The list includes also the ClassId (not the className)(table) 
+-- ex.: {name='',value='',code=''}
+-- @params: metadata - {+DESCRIPTION+} ({+TYPE+})
+-- @return:  id - (number)
 ------------------------------------------------------------------------
 
 function CMDBuild:createCard(classname, attributes_list, metadata)
@@ -983,14 +1098,19 @@ function CMDBuild:createCard(classname, attributes_list, metadata)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:updateCard
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
---                card_id - {+DESCRIPTION+} ({+TYPE+})
---                attributes_list - {+DESCRIPTION+} ({+TYPE+})
---                metadata - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:updateCard
+-- @purpose:  
+-- @description:  It updates a pre-existing card.
+--  It returns “true” if the operation went
+--  through.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
+-- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
+-- The list includes also the ClassId (not the className)(table) 
+-- ex.: {name='',value=''}
+-- @params: metadata - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:updateCard(classname, card_id, attributes_list, metadata)
@@ -1033,12 +1153,12 @@ function CMDBuild:updateCard(classname, card_id, attributes_list, metadata)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:deleteCard
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
---                card_id - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:deleteCard
+-- @purpose:  
+-- @description:  It deletes logically - in the identified class - the pre-existing card with the identified "id".  It returns “true” if the operation went through.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteCard(classname, card_id)
@@ -1060,13 +1180,16 @@ function CMDBuild:deleteCard(classname, card_id)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:getCard
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
---                card_id - {+DESCRIPTION+} ({+TYPE+})
---                attributes_list - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:getCard
+-- @purpose:  
+-- @description:  It returns the required card with all attributes specified in “attributeList” (all card attributes if “attributeList” is null).
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
+-- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
+-- The list includes also the ClassId (not the className)(table) 
+-- ex.: {name='',value=''}
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:getCard(classname, card_id, attributes_list)
@@ -1096,12 +1219,13 @@ function CMDBuild:getCard(classname, card_id, attributes_list)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:getCardHistory
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
---                card_id - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:getCardHistory
+-- @purpose:  
+-- @description:  It returns the list of the historicized
+--  versions of the specified card.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:getCardHistory(classname, card_id)
@@ -1121,20 +1245,20 @@ function CMDBuild:getCardHistory(classname, card_id)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:getCardList
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
---                attributes_list - {+DESCRIPTION+} ({+TYPE+})
---                filter - {+DESCRIPTION+} ({+TYPE+})
---                filter_sq_operator - {+DESCRIPTION+} ({+TYPE+})
---                order_type - {+DESCRIPTION+} ({+TYPE+})
---                limit - {+DESCRIPTION+} ({+TYPE+})
---                offset - {+DESCRIPTION+} ({+TYPE+})
---                full_text_query - {+DESCRIPTION+} ({+TYPE+})
---                cql_query - {+DESCRIPTION+} ({+TYPE+})
---                cql_query_parameters - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  CMDBuild:getCardList
+-- @purpose:  
+-- @description:  It returns the card list resulting from the specified query, completed with all attributes specified in “attributeList” (all card attributes if “attributeList” is null).  If the query is made on a superclass, the "className" attribute of the returned Card objects contains the name of the specific subclass the card belongs to, while in the attributeList it appears the ClassId of the same subclass.
+-- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.  They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.  The list includes also the ClassId (not the className)(table) ex.: {name='',value=''}
+-- @params: filter - It represents an atomic filter condition to select a card list. (table)
+-- @params: filter_sq_operator - It represents a concatenation of atomic filter conditions connected with an operator. (string)
+-- @params: order_type - It represents the ordering standard among the cards drawn from the filter query. (table)
+-- @params: limit - the number of returned results (number)
+-- @params: offset - {+DESCRIPTION+} ({+TYPE+})
+-- @params: full_text_query - {+DESCRIPTION+} ({+TYPE+})
+-- @params: cql_query - {+DESCRIPTION+} ({+TYPE+})
+-- @params: cql_query_parameters - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
@@ -1284,8 +1408,9 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
 end
 
 ---------------------------------------------------------------------
--- Call a remote method.
--- @param args Table with the arguments which could be:
+-- @name: CMDBuild:call 
+-- @description: Call a remote method.
+-- @params: args Table with the arguments which could be:
 -- url: String with the location of the server.
 -- soapaction: String with the value of the SOAPAction header.
 -- namespace: String with the namespace of the elements.
@@ -1295,7 +1420,7 @@ end
 -- internal_namespace: String with the optional namespace used
 --  as a prefix for the method name (default = "").
 -- soapversion: Number with SOAP version (default = 1.1).
--- @return String with namespace, String with method's name and
+-- @return: String with namespace, String with method's name and
 --	Table with SOAP elements (LuaExpat's format).
 ---------------------------------------------------------------------
 function CMDBuild:call(args)
@@ -1364,12 +1489,12 @@ function CMDBuild:call(args)
 end
 
 ------------------------------------------------------------------------
---         Name:  dump
---      Purpose:  
---  Description:  {+DESCRIPTION+}
---   Parameters:  prefix - {+DESCRIPTION+} ({+TYPE+})
---                a - {+DESCRIPTION+} ({+TYPE+})
---      Returns:  {+RETURNS+}
+-- @name:  dump
+-- @purpose:  
+-- @description:  {+DESCRIPTION+}
+-- @params: prefix - {+DESCRIPTION+} ({+TYPE+})
+-- @params: a - {+DESCRIPTION+} ({+TYPE+})
+-- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
 local function dump (prefix, a) 
@@ -1467,11 +1592,11 @@ local function main()
         resp = cmdbuild:getCard(args.getCardList, args.card_id)
       else
         ------------------------------------------------------------------------
-        --         Name:  kazniie_model
-        --      Purpose:  
-        --  Description:  Only Kazniie Innovation models
-        --   Parameters:  name - classname (string)
-        --      Returns:  table
+        -- @name:  kazniie_model
+        -- @purpose:  
+        -- @description:  Only Kazniie Innovation models
+        -- @params:  name - classname (string)
+        -- @returns:  table
         ------------------------------------------------------------------------
 
         local function kazniie_model(name, filtername, filter)
