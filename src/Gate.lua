@@ -108,7 +108,7 @@ end
 ------------------------------------------------------------------------
 
 function Gate:loadCards(classname, attributes, filter, ignoreFields, onCardLoad)
-  local xmltab=soap:get_card_list(classname, attributes, filter)
+  local xmltab=soap:getCardList(classname, attributes, filter)
 
   local outtab={}
   outtab["Id"]={}
@@ -165,7 +165,7 @@ end
 ------------------------------------------------------------------------
 
 function Gate:createCard(classname, attributes)
-  return soap:create_card(classname, attributes)
+  return soap:createCard(classname, attributes)
 end
 
 ------------------------------------------------------------------------
@@ -179,7 +179,7 @@ end
 ------------------------------------------------------------------------
 
 function Gate:updateCard(classname, id, attributes)
-  return soap:update_card(classname, id, attributes)
+  return soap:updateCard(classname, id, attributes)
 end
 
 ------------------------------------------------------------------------
@@ -192,7 +192,7 @@ end
 ------------------------------------------------------------------------
 
 function Gate:deleteCard(classname, id)
-  return soap:delete_card(classname, id)
+  return soap:deleteCard(classname, id)
 end
 
 ------------------------------------------------------------------------
@@ -207,7 +207,7 @@ end
 ------------------------------------------------------------------------
 
 function Gate:startWorkflow(classname, attributes, metadata, complete_task)
-  return soap:start_workflow(classname, attributes, metadata, compete_task)
+  return soap:startWorkflow(classname, attributes, metadata, compete_task)
 end
 
 ------------------------------------------------------------------------

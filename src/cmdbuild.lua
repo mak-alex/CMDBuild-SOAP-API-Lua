@@ -480,7 +480,7 @@ function CMDBuild:new(credentials, verbose, _debug)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:create_lookup
+--         Name:  CMDBuild:createLookup
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  lookup_type - {+DESCRIPTION+} ({+TYPE+})
@@ -493,7 +493,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:create_lookup(lookup_type, code, description, id, notes, parent_id, position)
+function CMDBuild:createLookup(lookup_type, code, description, id, notes, parent_id, position)
   local request = {
     url = self.url,
     soapaction = '',
@@ -520,14 +520,14 @@ function CMDBuild:create_lookup(lookup_type, code, description, id, notes, paren
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:delete_lookup
+--         Name:  CMDBuild:deleteLookup
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:delete_lookup(lookup_id)
+function CMDBuild:deleteLookup(lookup_id)
   local request = {
     url = self.url,
     soapaction = '',
@@ -545,7 +545,7 @@ function CMDBuild:delete_lookup(lookup_id)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:create_relation
+--         Name:  CMDBuild:createRelation
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  domain_name - {+DESCRIPTION+} ({+TYPE+})
@@ -559,7 +559,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:create_relation(domain_name, class1name, card1Id, class2name, card2Id, status, begin_date, end_date)
+function CMDBuild:createRelation(domain_name, class1name, card1Id, class2name, card2Id, status, begin_date, end_date)
   local request = {
     url = self.url,
     soapaction = '',
@@ -582,7 +582,7 @@ function CMDBuild:create_relation(domain_name, class1name, card1Id, class2name, 
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:delete_relation
+--         Name:  CMDBuild:deleteRelation
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  domain_name - {+DESCRIPTION+} ({+TYPE+})
@@ -596,7 +596,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:delete_relation(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
+function CMDBuild:deleteRelation(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
   local request = {
     url = self.url,
     soapaction = '',
@@ -619,7 +619,7 @@ function CMDBuild:delete_relation(domain_name, class1name, card1id, class2name, 
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:get_relation_list
+--         Name:  CMDBuild:getRelationList
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  domain_name - {+DESCRIPTION+} ({+TYPE+})
@@ -628,7 +628,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:get_relation_list(domain_name, classname, id)
+function CMDBuild:getRelationList(domain_name, classname, id)
   local request = {
     url = self.url,
     soapaction = '',
@@ -645,7 +645,7 @@ function CMDBuild:get_relation_list(domain_name, classname, id)
   return xml.eval(resp):find'ns2:return'
 end
 
-function CMDBuild:get_relation_history(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
+function CMDBuild:getRelationHistory(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
   local request = {
     url = self.url,
     soapaction = '',
@@ -668,7 +668,7 @@ function CMDBuild:get_relation_history(domain_name, class1name, card1id, class2n
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:get_lookup_list
+--         Name:  CMDBuild:getLookupList
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  lookup_type - {+DESCRIPTION+} ({+TYPE+})
@@ -677,11 +677,11 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:get_lookup_list(lookup_type, value, need_parent_list)
+function CMDBuild:getLookupList(lookup_type, value, need_parent_list)
   local request = {
     url = self.url,
     soapaction = '',
-    method = "soap1:getLookUpList",
+    method = "soap1:getLookupList",
     header = Header,
     entries = {
       { tag = "soap1:type", lookup_type },
@@ -696,14 +696,36 @@ function CMDBuild:get_lookup_list(lookup_type, value, need_parent_list)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:get_lookup_translation_by_id
+--         Name:  CMDBuild:getLookupById
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:get_lookup_translation_by_id(lookup_id)
+function CMDBuild:getLookupById(lookup_id)
+  local request = {
+    url = self.url,
+    soapaction = '',
+    method = "soap1:getLookupById",
+    header = Header,
+    entries = {
+      { tag = "soap1:id", lookup_id },
+    }
+  }
+  
+  local resp = self:call(request)
+  return XML.eval(resp):find'ns2:return'
+end
+------------------------------------------------------------------------
+--         Name:  CMDBuild:getLookupTranslationById
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  lookup_id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function CMDBuild:getLookupTranslationById(lookup_id)
   local request = {
     url = self.url,
     soapaction = '',
@@ -723,7 +745,7 @@ function CMDBuild:get_lookup_translation_by_id(lookup_id)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:start_workflow
+--         Name:  CMDBuild:startWorkflow
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
@@ -733,7 +755,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:start_workflow(classname, attributes_list, metadata, complete_task)
+function CMDBuild:startWorkflow(classname, attributes_list, metadata, complete_task)
   local attributes = {}
 
   local request = {
@@ -778,7 +800,7 @@ function CMDBuild:start_workflow(classname, attributes_list, metadata, complete_
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:update_workflow
+--         Name:  CMDBuild:updateWorkflow
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  process_id - {+DESCRIPTION+} ({+TYPE+})
@@ -787,7 +809,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:update_workflow(process_id, attributes_list, complete_task)
+function CMDBuild:updateWorkflow(process_id, attributes_list, complete_task)
   local attributes = {}
 
   local request = {
@@ -822,7 +844,7 @@ function CMDBuild:update_workflow(process_id, attributes_list, complete_task)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:upload_attachment
+--         Name:  CMDBuild:uploadAttachment
 --      Purpose:  
 --  Description:  
 --   Parameters:  classname - {+DESCRIPTION+} (string)
@@ -834,7 +856,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:upload_attachment(classname, card_id, file, filename, category, description)
+function CMDBuild:uploadAttachment(classname, card_id, file, filename, category, description)
   local request = {
     url = self.url,
     soapaction = '',
@@ -860,7 +882,7 @@ function CMDBuild:upload_attachment(classname, card_id, file, filename, category
   return xml.eval(resp):find'ns2:return'
 end
 
-function CMDBuild:download_attachment(classname, card_id, filename)
+function CMDBuild:downloadAttachment(classname, card_id, filename)
   local request = {
     url = self.url,
     soapaction = '',
@@ -877,7 +899,7 @@ function CMDBuild:download_attachment(classname, card_id, filename)
   return xml.eval(resp):find'ns2:return'
 end
 
-function CMDBuild:delete_attachment(classname, card_id, filename)
+function CMDBuild:deleteAttachment(classname, card_id, filename)
   local request = {
     url = self.url,
     soapaction = '',
@@ -894,7 +916,7 @@ function CMDBuild:delete_attachment(classname, card_id, filename)
   return xml.eval(resp):find'ns2:return'
 end
 
-function CMDBuild:update_attachment(classname, card_id, filename, description)
+function CMDBuild:updateAttachment(classname, card_id, filename, description)
   local request = {
     url = self.url,
     soapaction = '',
@@ -913,7 +935,7 @@ function CMDBuild:update_attachment(classname, card_id, filename, description)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:create_card
+--         Name:  CMDBuild:createCard
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
@@ -922,7 +944,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:create_card(classname, attributes_list, metadata)
+function CMDBuild:createCard(classname, attributes_list, metadata)
   local attributes = {}
 
   local request = {
@@ -961,7 +983,7 @@ function CMDBuild:create_card(classname, attributes_list, metadata)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:update_card
+--         Name:  CMDBuild:updateCard
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
@@ -971,7 +993,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:update_card(classname, card_id, attributes_list, metadata)
+function CMDBuild:updateCard(classname, card_id, attributes_list, metadata)
   local attributes = {}
 
   local request = {
@@ -1011,7 +1033,7 @@ function CMDBuild:update_card(classname, card_id, attributes_list, metadata)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:delete_card
+--         Name:  CMDBuild:deleteCard
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
@@ -1019,7 +1041,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:delete_card(classname, card_id)
+function CMDBuild:deleteCard(classname, card_id)
   local attributes = {}
 
   local request = {
@@ -1038,7 +1060,7 @@ function CMDBuild:delete_card(classname, card_id)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:get_card
+--         Name:  CMDBuild:getCard
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
@@ -1047,7 +1069,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:get_card(classname, card_id, attributes_list)
+function CMDBuild:getCard(classname, card_id, attributes_list)
   local request = {
     url = self.url,
     soapaction = '',
@@ -1074,7 +1096,7 @@ function CMDBuild:get_card(classname, card_id, attributes_list)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:get_card_history
+--         Name:  CMDBuild:getCardHistory
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
@@ -1082,7 +1104,7 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:get_card_history(classname, card_id)
+function CMDBuild:getCardHistory(classname, card_id)
   local request = {
     url = self.url,
     soapaction = '',
@@ -1099,7 +1121,7 @@ function CMDBuild:get_card_history(classname, card_id)
 end
 
 ------------------------------------------------------------------------
---         Name:  CMDBuild:get_card_list
+--         Name:  CMDBuild:getCardList
 --      Purpose:  
 --  Description:  {+DESCRIPTION+}
 --   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
@@ -1115,10 +1137,8 @@ end
 --      Returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
-  local attributes = {}
-  local orders = {}
-  local _limit = {}
+function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
+  local attributes, orders, _limit = {}, {}, {}
   Log.debug(string.format('Создаем запрос получения карт для класса: %s', classname), self._debug)
   local request = {
     url = self.url,
@@ -1406,7 +1426,7 @@ local function main()
         -- подключаем библиотеку и создаем новый инстанс
         local test = require'src.cmdbuild':new{'admin','3$rFvCdE','10.244.244.128'}
         -- получаем карты для класса Hosts и выводим их в stdout
-        print(test:get_card_list('Hosts')) 
+        print(test:getCardList('Hosts')) 
 
       Пример работы как со скриптом:
         # авторизовываем в CMDBuild и запрашиваем карты для класса Hosts
@@ -1424,7 +1444,7 @@ local function main()
   parser:option("-u --username", "Имя пользователя для подключения к CMDBuild")
   parser:option("-p --password", "Пароль для подключения к CMDBuild")
   parser:option("-i --ip", "IP адресс для подключения к CMDBuild")
-  parser:option("-g --get_card_list", "Название выгружаемого класса, (пример: Hosts)", nil)
+  parser:option("-g --getCardList", "Название выгружаемого класса, (пример: Hosts)", nil)
   parser:option("-c --card_id", "Идентификатор выгружаемой карты", nil)
   parser:option("-f --filter", "Фильтр для выгружаемых карт, (пример: hostid EQUALS or LIKE 1328439)"):args("*")
   parser:option("-F --format", "Формат вывода в stdout (xml или json)", 'json')
@@ -1437,14 +1457,14 @@ local function main()
   if args.username and args.password and args.ip then
     local cmdbuild = CMDBuild:new({ args.username, args.password, args.ip }, args.verbose, args.debug)
     
-    if args.get_card_list then
+    if args.getCardList then
       local filter, resp = nil, nil
       if args.filter then
         filter={ name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
       end
 
       if args.card_id then
-        resp = cmdbuild:get_card(args.get_card_list, args.card_id)
+        resp = cmdbuild:getCard(args.getCardList, args.card_id)
       else
         ------------------------------------------------------------------------
         --         Name:  kazniie_model
@@ -1456,23 +1476,23 @@ local function main()
 
         local function kazniie_model(name, filtername, filter)
           local Hosts = {}
-          Hosts = decode(cmdbuild:get_card_list(name, nil, filter))
+          Hosts = decode(cmdbuild:getCardList(name, nil, filter))
           for k, v in pairs(Hosts.Id) do
-            Hosts.Id[k]["Items"] = decode(cmdbuild:get_card_list("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Triggers"] = decode(cmdbuild:get_card_list("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Applications"] = decode(cmdbuild:get_card_list("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Items"] = decode(cmdbuild:getCardList("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Triggers"] = decode(cmdbuild:getCardList("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Applications"] = decode(cmdbuild:getCardList("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
           end
           return cjson.encode(Hosts)
         end
 
-        if args.get_card_list == 'Templates' then args.get_card_list = 'templates' end
+        if args.getCardList == 'Templates' then args.getCardList = 'templates' end
 
-        if args.dependencies and args.get_card_list == 'Hosts' then
+        if args.dependencies and args.getCardList == 'Hosts' then
           resp = kazniie_model("Hosts", 'hostid', filter)
-        elseif args.dependencies and args.get_card_list == 'templates' then
+        elseif args.dependencies and args.getCardList == 'templates' then
           resp = kazniie_model("templates", 'hostid', filter)
         else
-          resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
+          resp = cmdbuild:getCardList(args.getCardList, nil, filter)
         end
       end
 
