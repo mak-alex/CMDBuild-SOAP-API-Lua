@@ -8,7 +8,7 @@
 --  Description:  Библиотека для работы с CMDBuild SOAP API
 --
 --      Options:  ---
--- Requirements:  LuaXML, LuaSocket, LuaSec, LuaExpat, lib/base64.lua
+-- Requirements:  LuaXML, LuaSocket, LuaSec, lib/{base64.lua,ArgParse.lua,Log.lua}
 --         Bugs:  ---
 --        Notes:  ---
 --       Author:  Alex M.A.K. (Mr), <alex-m.a.k@yandex.kz>
@@ -20,9 +20,6 @@
 --
 
 -- todo: добавить обработчик ошибок
--- todo: научить формить таблицу на выходе чтобы исключить Gate.lua
--- todo: избавиться от библиотеки LuaXML
--- todo: добавить человеческое логирование
 -- todo: добавить описание методов и аргументов
 -- todo: избавиться от повторяющихся действий
 --
@@ -39,8 +36,7 @@ local assert, error, pairs, tonumber, tostring, type = assert, error, pairs, ton
 local table = require"table"
 local tconcat, tinsert, tremove = table.concat, table.insert, table.remove
 local string = require"string"
-local sub = string.sub
-local rep = string.rep
+local sub, rep = string.sub, string.rep
 local gsub, strfind, strformat = string.gsub, string.find, string.format
 local max = require"math".max
 local ltn12 = require("ltn12")
@@ -1403,78 +1399,81 @@ local function dump (prefix, a)
   end
 end
 
+function main()
+  local parser = argparse("script", "An example.")
+  parser:flag("-l --list", "List all methods")
+  parser:option("-u --username", "username")
+  parser:option("-p --password", "password")
+  parser:option("-i --ip", "IP address for connect in CMDBuild")
+  parser:option("-g --get_card_list", "Get card list, ex('Hosts')", nil)
+  parser:option("-c --card_id", "id", nil)
+  parser:option("-f --filter", "ex.(name operator value)"):args("*")
+  parser:option("-F --format", "Format output xml or json", 'json')
+  parser:flag'-v --verbose'
+  parser:flag'-d --debug'
+  parser:flag('-D --dependencies', 'Работает только с классами Templates & Hosts для модели КБ Промсвязь, вывод только в JSON т.к. таблицы модифицируется до неузнаваемости')
 
+  local args = parser:parse()
+  if args.list then dump("CMDBuild", CMDBuild) end
+  if args.username and args.password and args.ip then
+    local cmdbuild = CMDBuild:new({ args.username, args.password, args.ip }, args.verbose, args.debug)
+    
+    if args.get_card_list then
+      local filter, resp = nil, nil
+      if args.filter then
+        filter={ name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
+      end
 
-local parser = argparse("script", "An example.")
-parser:flag("-l --list", "List all methods")
-parser:option("-u --username", "username")
-parser:option("-p --password", "password")
-parser:option("-i --ip", "IP address for connect in CMDBuild")
-parser:option("-g --get_card_list", "Get card list, ex('Hosts')", nil)
-parser:option("-c --card_id", "id", nil)
-parser:option("-f --filter", "ex.(name operator value)"):args("*")
-parser:option("-F --format", "Format output xml or json", 'json')
-parser:flag'-v --verbose'
-parser:flag'-d --debug'
-parser:flag('-D --dependencies', 'Работает только с классами Templates & Hosts для модели КБ Промсвязь, вывод только в JSON т.к. таблицы модифицируется до неузнаваемости')
+      if args.card_id then
+        resp = cmdbuild:get_card(args.get_card_list, args.card_id)
+      else
+        ------------------------------------------------------------------------
+        --         Name:  kazniie_model
+        --      Purpose:  
+        --  Description:  Only my models
+        --   Parameters:  name - classname (string)
+        --      Returns:  table
+        ------------------------------------------------------------------------
 
-local args = parser:parse()
-if args.list then dump("CMDBuild", CMDBuild) end
-if args.username and args.password and args.ip then
-  local cmdbuild = CMDBuild:new({ args.username, args.password, args.ip }, args.verbose, args.debug)
-  
-  if args.get_card_list then
-    local filter, resp = nil, nil
-    if args.filter then
-      filter={ name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
-    end
+        local function kazniie_model(name, filtername, filter)
+          local Hosts = {}
+          Hosts = decode(cmdbuild:get_card_list(name, nil, filter))
+          for k, v in pairs(Hosts.Id) do
+            local Items = decode(cmdbuild:get_card_list("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Items"] = Items
+            local Triggers = decode(cmdbuild:get_card_list("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Triggers"] = Triggers
+            local Applications = decode(cmdbuild:get_card_list("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Applications"] = Applications
+          end
 
-    if args.card_id then
-      resp = cmdbuild:get_card(args.get_card_list, args.card_id)
-    else
-      ------------------------------------------------------------------------
-      --         Name:  kazniie_model
-      --      Purpose:  
-      --  Description:  Only my models
-      --   Parameters:  name - classname (string)
-      --      Returns:  table
-      ------------------------------------------------------------------------
-
-      local function kazniie_model(name, filtername)
-        local Hosts = {}
-        Hosts = decode(cmdbuild:get_card_list(name))
-        for k, v in pairs(Hosts.Id) do
-          local Items = decode(cmdbuild:get_card_list("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
-          Hosts.Id[k]["Items"] = Items
-          local Triggers = decode(cmdbuild:get_card_list("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
-          Hosts.Id[k]["Triggers"] = Triggers
-          local Applications = decode(cmdbuild:get_card_list("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
-          Hosts.Id[k]["Applications"] = Applications
+          return cjson.encode(Hosts)
         end
 
-        return cjson.encode(Hosts)
+        if args.get_card_list == 'Templates' then args.get_card_list = 'templates' end
+
+        if args.dependencies and args.get_card_list == 'Hosts' then
+          resp = kazniie_model("Hosts", 'hostid', filter)
+        elseif args.dependencies and args.get_card_list == 'templates' then
+          resp = kazniie_model("templates", 'hostid', filter)
+        else
+          print(args.get_card_list)
+          resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
+        end
       end
 
-      if args.dependencies and args.get_card_list == 'Hosts' then
-        resp = kazniie_model(args.get_card_list, 'hostid')
-      elseif args.dependencies and args.get_card_list == 'Templates' then
-        resp = kazniie_model(args.get_card_list, 'hostid')
+      if args.format == 'xml' and not args.dependencies then
+        print(resp)
+      elseif args.format == 'xml' and args.dependencies then
+        Log.warn('Вывод возможен лишь в JSON формате', args.debug)
+        print(pretty(cjson.decode(resp)))
+      elseif args.format == 'json' and args.dependencies then
+        print(pretty(cjson.decode(resp)))
       else
-        resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
+        print(pretty(decode(resp)))
       end
-    end
-
-    if args.format == 'xml' and not args.dependencies then
-      print(resp)
-    elseif args.format == 'xml' and args.dependencies then
-      Log.warn('Вывод возможен лишь в JSON формате', args.debug)
-      print(pretty(cjson.decode(resp)))
-    elseif args.format == 'json' and args.dependencies then
-      print(pretty(cjson.decode(resp)))
-    else
-      print(pretty(decode(resp)))
     end
   end
 end
-
+main()
 return CMDBuild
