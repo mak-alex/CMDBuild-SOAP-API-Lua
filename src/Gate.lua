@@ -5,7 +5,9 @@
 --
 --        Usage:  ./CMDBGate.lua
 --
---  Description:  
+--  Description:  Обертка над cmdbuild.lua, используется во многих скриптах
+--  import/export/create_host/create_incident и т.д., поэтому привел ее в
+--  порядок
 --
 --      Options:  ---
 -- Requirements:  ---
@@ -28,9 +30,26 @@ local soap=nil
 
 local Utils={}
 
+------------------------------------------------------------------------
+--         Name:  Utils.isempty
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  s - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
 function Utils.isempty(s)
   return (type(s) == "table" and next(s) == nil) or s == nil or s == ''
 end
+
+------------------------------------------------------------------------
+--         Name:  Utils.isin
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  tab - {+DESCRIPTION+} ({+TYPE+})
+--                what - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
 
 function Utils.isin(tab,what)
   if Utils.isempty(tab) then return false end
@@ -38,6 +57,16 @@ function Utils.isin(tab,what)
 
   return false
 end
+
+------------------------------------------------------------------------
+--         Name:  Gate:new
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  credentials - {+DESCRIPTION+} ({+TYPE+})
+--                verbose - {+DESCRIPTION+} ({+TYPE+})
+--                _debug - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
 
 function Gate:new(credentials, verbose, _debug)
   return setmetatable(
@@ -53,13 +82,32 @@ function Gate:new(credentials, verbose, _debug)
   )
 end
 
+------------------------------------------------------------------------
+--         Name:  Gate:auth
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  -
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
 function Gate:auth()
   soap = CMDBuild:new{ username = self.username, password = self.password , url = self.url }
-  self:get_locations()
   return soap
 end
   
-function Gate:load_cards(classname, attributes, filter, ignoreFields, onCardLoad)
+------------------------------------------------------------------------
+--         Name:  Gate:loadCards
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
+--                attributes - {+DESCRIPTION+} ({+TYPE+})
+--                filter - {+DESCRIPTION+} ({+TYPE+})
+--                ignoreFields - {+DESCRIPTION+} ({+TYPE+})
+--                onCardLoad - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:loadCards(classname, attributes, filter, ignoreFields, onCardLoad)
   local xmltab=soap:get_card_list(classname, attributes, filter)
 
   local outtab={}
@@ -107,23 +155,70 @@ function Gate:load_cards(classname, attributes, filter, ignoreFields, onCardLoad
   return outtab
 end
 
-function Gate:create_card(classname, attributes)
+------------------------------------------------------------------------
+--         Name:  Gate:createCard
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
+--                attributes - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:createCard(classname, attributes)
   return soap:create_card(classname, attributes)
 end
 
-function Gate:update_card(classname, id, attributes)
+------------------------------------------------------------------------
+--         Name:  Gate:updateCard
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
+--                id - {+DESCRIPTION+} ({+TYPE+})
+--                attributes - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:updateCard(classname, id, attributes)
   return soap:update_card(classname, id, attributes)
 end
 
-function Gate:delete_card(classname, id)
+------------------------------------------------------------------------
+--         Name:  Gate:deleteCard
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
+--                id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:deleteCard(classname, id)
   return soap:delete_card(classname, id)
 end
 
-function Gate:start_workflow(classname, attributes, metadata, complete_task)
+------------------------------------------------------------------------
+--         Name:  Gate:startWorkflow
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  classname - {+DESCRIPTION+} ({+TYPE+})
+--                attributes - {+DESCRIPTION+} ({+TYPE+})
+--                metadata - {+DESCRIPTION+} ({+TYPE+})
+--                complete_task - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:startWorkflow(classname, attributes, metadata, complete_task)
   return soap:start_workflow(classname, attributes, metadata, compete_task)
 end
 
-function Gate:get_locations()
+------------------------------------------------------------------------
+--         Name:  Gate:getLocations
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  -
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocations()
   local ignore={"Code","PLZ","Notes","techsupport","BuildingNr","Street"}
   local outtab={}
 
@@ -134,7 +229,7 @@ function Gate:get_locations()
   outtab["LocationID2Id"]={}
   outtab["Id"]={}
 
-   outtab.Id=self:load_cards(
+   outtab.Id=self:loadCards(
     "Locations",nil,nil,ignore,
     function(otab,_id)
       outtab.Description2Id[otab.Id[_id]["Description"]]=_id
@@ -149,84 +244,240 @@ function Gate:get_locations()
   return self.Locations
 end
 
-function Gate:get_location_id_by_name(name)
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationIdByName
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  name - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationIdByName(name)
+  if not self.Loacations then self:getLocations() end
   return self.Locations.Description2Id[name]
 end
 
-function Gate:get_location_by_name(name)
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationByName
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  name - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationByName(name)
+  if not self.Loacations then self:getLocations() end
   return self.Locations.Id[self.Locations.Description2Id[name]]
 end
 
-function Gate:get_location_by_id(Id)
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationById
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  Id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationById(Id)
+  if not self.Loacations then self:getLocations() end
   return self.Locations.Id.Id[Id] 
 end
 
-function Gate:get_location_with_name_like_this_one(name)
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationWithNameLikeThisOne
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  name - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationWithNameLikeThisOne(name)
+  if not self.Loacations then self:getLocations() end
   local outtab={}
   for key, value in pairs(self.Locations.Description2Id) do
-    table.insert(outtab, value)
+    local found = string.find(key,name)
+    if found then
+      table.insert(outtab, value)
+    end
   end
   return outtab
 end
 
-function Gate:get_location_id_by_id(id)
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationIdByID
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationIdByID(id)
+  if not self.Loacations then self:getLocations() end
   return self.Locations.LocationID2Id[id]
 end
 
-function Gate:get_location_description_by_id(id)
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationDescriptionByID
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationDescriptionByID
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationDescriptionByID(id)
+  if not self.Loacations then self:getLocations() end
   return self.Locations.Id2Description[self:get_location_id_by_id(id)]
 end
 
-function Gate:get_hosts_for_location_id(id)
-  return self:load_cards(
-    "Hosts", nil, { name = "Location", operator = 'EQUALS', value = id }
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationDescriptionById
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationDescriptionById(id)
+  if not self.Loacations then self:getLocations() end
+  return self.Locations.Id2Description[id]
+end
+
+------------------------------------------------------------------------
+--         Name:  Gate:getLocationHosts
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getLocationHosts(id)
+  return self:loadCards(
+    'Hosts',
+    nil,
+    {
+      name = 'Location',
+      operator = 'EQUALS',
+      value = id
+    }
   )
 end
 
-function Gate:get_items_for_host_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getHostItems
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getHostItems(id)
+  return self:loadCards(
     "zItems", nil, { name = "hostid", operator = 'EQUALS', value = id }
   )
 end
 
-function Gate:get_triggers_for_host_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getHostTriggers
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getHostTriggers(id)
+  return self:loadCards(
     "ztriggers", nil, { name = "hostid", operator = 'EQUALS', value = id }
   )
 end
 
-function Gate:get_applications_for_host_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getHostApplications
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getHostApplications(id)
+  return self:loadCards(
     "zapplications", nil, { name = "hostid", operator = 'EQUALS', value = id }
   )
 end
 
-function Gate:get_interface_for_host_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getHostInterfaces
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getHostInterfaces(id)
+  return self:loadCards(
     "zinterfaces", nil, { name = "hostid", operator = 'EQUALS', value = id }
   )
 end
 
-function Gate:get_items_for_template_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getTemplateItems
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getTemplateItems(id)
+  return self:loadCards(
     "zItems", nil, { name = "templateid", operator = 'EQUALS', value = id }
   )
 end
 
-function Gate:get_triggers_for_template_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getTemplateTriggers
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getTemplateTriggers(id)
+  return self:loadCards(
     "ztriggers", nil, { name = "templateid", operator = 'EQUALS', value = id }
   )
 end
 
-function Gate:get_applications_for_template_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getTemplateApplications
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getTemplateApplications(id)
+  return self:loadCards(
     "zapplications", nil, { name = "templateid", operator = 'EQUALS', value = id }
   )
 end
 
-function Gate:get_interface_for_template_id(id)
-  return self:load_cards(
+------------------------------------------------------------------------
+--         Name:  Gate:getTemplateInterfaces
+--      Purpose:  
+--  Description:  {+DESCRIPTION+}
+--   Parameters:  id - {+DESCRIPTION+} ({+TYPE+})
+--      Returns:  {+RETURNS+}
+------------------------------------------------------------------------
+
+function Gate:getTemplateInterfaces(id)
+  return self:loadCards(
     "zinterfaces", nil, { name = "templateid", operator = 'EQUALS', value = id }
   )
 end

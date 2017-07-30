@@ -22,16 +22,17 @@
 -- todo: добавить обработчик ошибок
 -- todo: добавить описание методов и аргументов
 -- todo: избавиться от повторяющихся действий
+-- todo: причесать код (это мелочь, но все таки нужна мелочь)
 --
 
 require "luarocks.loader"
-require'LuaXML'
 local Log = require'lib.Log'
-local XML = xml
-local ok, cjson = pcall(require, "cjson.safe")
-local enc = ok and cjson.encode or function() return nil, "Lua cJSON encoder not found" end
 local base64 = require'lib.base64'
 local argparse = require "lib.ArgParse"
+
+require'LuaXML'
+local ok, cjson = pcall(require, "cjson.safe")
+local enc = ok and cjson.encode or function() return nil, "Lua cJSON encoder not found" end
 local assert, error, pairs, tonumber, tostring, type = assert, error, pairs, tonumber, tostring, type
 local table = require"table"
 local tconcat, tinsert, tremove = table.concat, table.insert, table.remove
@@ -53,6 +54,7 @@ local tunescape = {
 	['&amp;'] = '&', ['&lt;'] = '<', ['&gt;'] = '>', ['&quot;'] = '"', ['&apos;'] = "'",
 }
 local serialize
+local XML = xml
 local header_template = { tag = "soap:Header", }
 local envelope_template = {
 	tag = "soap:Envelope",
@@ -1046,8 +1048,6 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:get_card(classname, card_id, attributes_list)
-  local attributes = {}
-
   local request = {
     url = self.url,
     soapaction = '',
@@ -1083,8 +1083,6 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:get_card_history(classname, card_id)
-  local attributes = {}
-
   local request = {
     url = self.url,
     soapaction = '',
@@ -1341,6 +1339,7 @@ function CMDBuild:call(args)
 
 	local response = retriveMessage(tbody)
   Log.debug(XML.eval(response), self._debug)
+
   return response
 end
 
