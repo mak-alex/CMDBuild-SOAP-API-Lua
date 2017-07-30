@@ -467,7 +467,7 @@ end
 -- @return String with namespace, String with method's name and
 --	Table with SOAP elements (LuaExpat's format).
 ---------------------------------------------------------------------
-function client.call(args)
+function CMDBuild:call(args)
 	local soap_action, content_type_header
 	if (not args.soapversion) or tonumber(args.soapversion) == 1.1 then
 		soap_action = '"'..assert(args.soapaction, mandatory_soapaction)..'"'
@@ -484,6 +484,7 @@ function client.call(args)
 		xml_header = xml_header:gsub('"%?>', '" encoding="'..args.encoding..'"?>')
 	end
 	local request_body = xml_header..encode(args)
+  Log.debug(XML.eval(request_body), self._debug)
 	local request_sink, tbody = ltn12.sink.table()
 	local headers = {
 		["Content-Type"] = content_type_header,
@@ -504,8 +505,8 @@ function client.call(args)
 	}
 
 	local protocol = url.url:match"^(%a+)" -- protocol's name
-	local mod = assert(client[protocol], '"'..protocol..'" protocol support unavailable. Try soap.client.'..protocol..' = require"'..suggested_layers[protocol]..'" to enable it.')
-	local request = assert(mod.request, 'Could not find request function on module soap.client.'..protocol)
+	local mod = assert(client[protocol], '"'..protocol..'" protocol support unavailable. Try soap.CMDBuild:'..protocol..' = require"'..suggested_layers[protocol]..'" to enable it.')
+	local request = assert(mod.request, 'Could not find request function on module soap.CMDBuild:'..protocol)
 	local one_or_nil, status_code, headers, receive_status = request(url)
 	local body = tconcat(tbody)
 
@@ -525,7 +526,9 @@ function client.call(args)
     return ret;
   end
 
-	return retriveMessage(tbody)
+	local response = retriveMessage(tbody)
+  Log.debug(XML.eval(response), self._debug)
+  return response
 end
 
 
@@ -551,7 +554,8 @@ function CMDBuild:new(credentials, verbose, _debug)
   }
   return setmetatable(
     {
-      url = credentials.url or 'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
+      url = credentials.url or 
+        'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
       verbose = verbose or false,
       _debug = _debug or false
     }, mt  
@@ -594,7 +598,7 @@ function CMDBuild:create_lookup(lookup_type, code, description, id, notes, paren
   end
   table.insert(request.entries[1], { tag = "soap1:type", lookup_type})
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -619,7 +623,7 @@ function CMDBuild:delete_lookup(lookup_id)
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -656,7 +660,7 @@ function CMDBuild:create_relation(domain_name, class1name, card1Id, class2name, 
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -693,7 +697,7 @@ function CMDBuild:delete_relation(domain_name, class1name, card1id, class2name, 
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
 
@@ -720,7 +724,7 @@ function CMDBuild:get_relation_list(domain_name, classname, id)
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
 
@@ -742,7 +746,7 @@ function CMDBuild:get_relation_history(domain_name, class1name, card1id, class2n
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
 
@@ -770,7 +774,7 @@ function CMDBuild:get_lookup_list(lookup_type, value, need_parent_list)
   if value then table.insert(request.entries, { tag = "soap1:value", value}) end
   if need_parent_list then table.insert(request.entries, {tag = "soap1:parentList", true}) end
   
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -797,7 +801,7 @@ function CMDBuild:get_lookup_translation_by_id(lookup_id)
     }
   }
   
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -852,7 +856,7 @@ function CMDBuild:start_workflow(classname, attributes_list, metadata, complete_
     table.insert(request.entries, { tag = "soap1:competeTask", tosstring(ctask) })
   end
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -896,7 +900,7 @@ function CMDBuild:update_workflow(process_id, attributes_list, complete_task)
     table.insert(request.entries, { tag = "soap1:competeTask", tosstring(ctask) })
   end
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -935,7 +939,7 @@ function CMDBuild:upload_attachment(classname, card_id, file, filename, category
   end
 
   -- todo: добавить открытие и конвертирование файла в base64
-  local resp = client.call(request)
+  local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
 
@@ -952,7 +956,7 @@ function CMDBuild:download_attachment(classname, card_id, filename)
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
 
@@ -969,7 +973,7 @@ function CMDBuild:delete_attachment(classname, card_id, filename)
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
 
@@ -987,7 +991,7 @@ function CMDBuild:update_attachment(classname, card_id, filename, description)
     }
   }
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return xml.eval(resp):find'ns2:return'
 end
 
@@ -1035,7 +1039,7 @@ function CMDBuild:create_card(classname, attributes_list, metadata)
     })
   end
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -1085,7 +1089,7 @@ function CMDBuild:update_card(classname, card_id, attributes_list, metadata)
     })
   end
 
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -1112,7 +1116,7 @@ function CMDBuild:delete_card(classname, card_id)
     }
   }
   
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -1150,7 +1154,7 @@ function CMDBuild:get_card(classname, card_id, attributes_list)
     table.insert(request.entries, attributes)
   end
   
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -1177,7 +1181,7 @@ function CMDBuild:get_card_history(classname, card_id)
     }
   }
   
-  local resp = client.call(request)
+  local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
 end
 
@@ -1329,7 +1333,7 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
     self.verbose
   )
   
-  local resp = client.call(request)
+  local resp = self:call(request)
   if not resp then
     Log.warn(
       string.format("Не удалось получить карты для класса: %s", classname), 
