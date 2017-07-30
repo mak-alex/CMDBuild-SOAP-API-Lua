@@ -380,7 +380,7 @@ end
 local function decode(xmltab)
   local outtab={}
   outtab["Id"]={}
-
+  if not xmltab then return end
   for i=1,#xmltab
   do
     id=xmltab[i]:find("ns2:id")
@@ -450,87 +450,6 @@ local function list_children (obj, tag)
 		return nil
 	end
 end
-
-
----------------------------------------------------------------------
--- Call a remote method.
--- @param args Table with the arguments which could be:
--- url: String with the location of the server.
--- soapaction: String with the value of the SOAPAction header.
--- namespace: String with the namespace of the elements.
--- method: String with the method's name.
--- entries: Table of SOAP elements (LuaExpat's format).
--- header: Table describing the header of the SOAP-ENV (optional).
--- internal_namespace: String with the optional namespace used
---  as a prefix for the method name (default = "").
--- soapversion: Number with SOAP version (default = 1.1).
--- @return String with namespace, String with method's name and
---	Table with SOAP elements (LuaExpat's format).
----------------------------------------------------------------------
-function CMDBuild:call(args)
-	local soap_action, content_type_header
-	if (not args.soapversion) or tonumber(args.soapversion) == 1.1 then
-		soap_action = '"'..assert(args.soapaction, mandatory_soapaction)..'"'
-		content_type_header = "text/xml;charset=UTF-8"
-	elseif tonumber(args.soapversion) == 1.2 then
-		soap_action = nil
-		content_type_header = "application/soap+xml"
-	else
-		assert(false, invalid_args..tostring(args.soapversion)..", "..tostring(args.soapaction))
-	end
-
-	local xml_header = xml_header_template
-	if args.encoding then
-		xml_header = xml_header:gsub('"%?>', '" encoding="'..args.encoding..'"?>')
-	end
-	local request_body = xml_header..encode(args)
-  Log.debug(XML.eval(request_body), self._debug)
-	local request_sink, tbody = ltn12.sink.table()
-	local headers = {
-		["Content-Type"] = content_type_header,
-		["Content-Length"] = tostring(request_body:len()),
-		["SOAPAction"] = soap_action,
-	}
-	if args.headers then
-		for h, v in pairs (args.headers) do
-			headers[h] = v
-		end
-	end
-	local url = {
-		url = assert(args.url, mandatory_url),
-		method = "POST",
-		source = ltn12.source.string(request_body),
-		sink = request_sink,
-		headers = headers,
-	}
-
-	local protocol = url.url:match"^(%a+)" -- protocol's name
-	local mod = assert(client[protocol], '"'..protocol..'" protocol support unavailable. Try soap.CMDBuild:'..protocol..' = require"'..suggested_layers[protocol]..'" to enable it.')
-	local request = assert(mod.request, 'Could not find request function on module soap.CMDBuild:'..protocol)
-	local one_or_nil, status_code, headers, receive_status = request(url)
-	local body = tconcat(tbody)
-
-  local function retriveMessage(response)
-    local resp=jtr(response)
-    local istart,iend = resp:find('<soap:Envelope.*</soap:Envelope>');
-    if(istart and iend) then
-      return resp:sub(istart,iend);
-    else
-      return nil
-    end
-  end
-
-  function jtr(text_array)
-    local ret=""
-    for i = 1,#text_array do if text_array[i] then ret=ret..text_array[i]; end end
-    return ret;
-  end
-
-	local response = retriveMessage(tbody)
-  Log.debug(XML.eval(response), self._debug)
-  return response
-end
-
 
 ------------------------------------------------------------------------
 --         Name:  CMDBuild:new
@@ -1350,6 +1269,85 @@ function CMDBuild:get_card_list(classname, attributes_list, filter, filter_sq_op
   return XML.eval(resp):find'ns2:return'
 end
 
+---------------------------------------------------------------------
+-- Call a remote method.
+-- @param args Table with the arguments which could be:
+-- url: String with the location of the server.
+-- soapaction: String with the value of the SOAPAction header.
+-- namespace: String with the namespace of the elements.
+-- method: String with the method's name.
+-- entries: Table of SOAP elements (LuaExpat's format).
+-- header: Table describing the header of the SOAP-ENV (optional).
+-- internal_namespace: String with the optional namespace used
+--  as a prefix for the method name (default = "").
+-- soapversion: Number with SOAP version (default = 1.1).
+-- @return String with namespace, String with method's name and
+--	Table with SOAP elements (LuaExpat's format).
+---------------------------------------------------------------------
+function CMDBuild:call(args)
+	local soap_action, content_type_header
+	if (not args.soapversion) or tonumber(args.soapversion) == 1.1 then
+		soap_action = '"'..assert(args.soapaction, mandatory_soapaction)..'"'
+		content_type_header = "text/xml;charset=UTF-8"
+	elseif tonumber(args.soapversion) == 1.2 then
+		soap_action = nil
+		content_type_header = "application/soap+xml"
+	else
+		assert(false, invalid_args..tostring(args.soapversion)..", "..tostring(args.soapaction))
+	end
+
+	local xml_header = xml_header_template
+	if args.encoding then
+		xml_header = xml_header:gsub('"%?>', '" encoding="'..args.encoding..'"?>')
+	end
+	local request_body = xml_header..encode(args)
+  Log.debug(XML.eval(request_body), self._debug)
+	local request_sink, tbody = ltn12.sink.table()
+	local headers = {
+		["Content-Type"] = content_type_header,
+		["Content-Length"] = tostring(request_body:len()),
+		["SOAPAction"] = soap_action,
+	}
+	if args.headers then
+		for h, v in pairs (args.headers) do
+			headers[h] = v
+		end
+	end
+	local url = {
+		url = assert(args.url, mandatory_url),
+		method = "POST",
+		source = ltn12.source.string(request_body),
+		sink = request_sink,
+		headers = headers,
+	}
+
+	local protocol = url.url:match"^(%a+)" -- protocol's name
+	local mod = assert(client[protocol], '"'..protocol..'" protocol support unavailable. Try soap.CMDBuild:'..protocol..' = require"'..suggested_layers[protocol]..'" to enable it.')
+	local request = assert(mod.request, 'Could not find request function on module soap.CMDBuild:'..protocol)
+	local one_or_nil, status_code, headers, receive_status = request(url)
+	local body = tconcat(tbody)
+
+  local function retriveMessage(response)
+    local resp=jtr(response)
+    local istart,iend = resp:find('<soap:Envelope.*</soap:Envelope>');
+    if(istart and iend) then
+      return resp:sub(istart,iend);
+    else
+      return nil
+    end
+  end
+
+  function jtr(text_array)
+    local ret=""
+    for i = 1,#text_array do if text_array[i] then ret=ret..text_array[i]; end end
+    return ret;
+  end
+
+	local response = retriveMessage(tbody)
+  Log.debug(XML.eval(response), self._debug)
+  return response
+end
+
 ------------------------------------------------------------------------
 --         Name:  dump
 --      Purpose:  
@@ -1405,6 +1403,8 @@ local function dump (prefix, a)
   end
 end
 
+
+
 local parser = argparse("script", "An example.")
 parser:flag("-l --list", "List all methods")
 parser:option("-u --username", "username")
@@ -1416,6 +1416,7 @@ parser:option("-f --filter", "ex.(name operator value)"):args("*")
 parser:option("-F --format", "Format output xml or json", 'json')
 parser:flag'-v --verbose'
 parser:flag'-d --debug'
+parser:flag('-D --dependencies', 'Работает только с классами Templates & Hosts для модели КБ Промсвязь, вывод только в JSON т.к. таблицы модифицируется до неузнаваемости')
 
 local args = parser:parse()
 if args.list then dump("CMDBuild", CMDBuild) end
@@ -1431,10 +1432,45 @@ if args.username and args.password and args.ip then
     if args.card_id then
       resp = cmdbuild:get_card(args.get_card_list, args.card_id)
     else
-      resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
+      ------------------------------------------------------------------------
+      --         Name:  kazniie_model
+      --      Purpose:  
+      --  Description:  Only my models
+      --   Parameters:  name - classname (string)
+      --      Returns:  table
+      ------------------------------------------------------------------------
+
+      local function kazniie_model(name, filtername)
+        local Hosts = {}
+        Hosts = decode(cmdbuild:get_card_list(name))
+        for k, v in pairs(Hosts.Id) do
+          local Items = decode(cmdbuild:get_card_list("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
+          Hosts.Id[k]["Items"] = Items
+          local Triggers = decode(cmdbuild:get_card_list("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
+          Hosts.Id[k]["Triggers"] = Triggers
+          local Applications = decode(cmdbuild:get_card_list("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
+          Hosts.Id[k]["Applications"] = Applications
+        end
+
+        return cjson.encode(Hosts)
+      end
+
+      if args.dependencies and args.get_card_list == 'Hosts' then
+        resp = kazniie_model(args.get_card_list, 'hostid')
+      elseif args.dependencies and args.get_card_list == 'Templates' then
+        resp = kazniie_model(args.get_card_list, 'hostid')
+      else
+        resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
+      end
     end
-    if args.format == 'xml' then
+
+    if args.format == 'xml' and not args.dependencies then
       print(resp)
+    elseif args.format == 'xml' and args.dependencies then
+      Log.warn('Вывод возможен лишь в JSON формате', args.debug)
+      print(pretty(cjson.decode(resp)))
+    elseif args.format == 'json' and args.dependencies then
+      print(pretty(cjson.decode(resp)))
     else
       print(pretty(decode(resp)))
     end
