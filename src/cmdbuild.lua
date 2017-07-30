@@ -1399,19 +1399,39 @@ local function dump (prefix, a)
   end
 end
 
-function main()
-  local parser = argparse("script", "An example.")
-  parser:flag("-l --list", "List all methods")
-  parser:option("-u --username", "username")
-  parser:option("-p --password", "password")
-  parser:option("-i --ip", "IP address for connect in CMDBuild")
-  parser:option("-g --get_card_list", "Get card list, ex('Hosts')", nil)
-  parser:option("-c --card_id", "id", nil)
-  parser:option("-f --filter", "ex.(name operator value)"):args("*")
-  parser:option("-F --format", "Format output xml or json", 'json')
+local function main()
+  local parser = argparse()
+    :name "cmdbuild"
+    :description [[Скрипт-библиотека для работы с CMDBuild SOAP API.
+      Пример работы как с модулем/библиотекой:
+        -- подключаем библиотеку и создаем новый инстанс
+        local test = require'src.cmdbuild':new{'admin','3$rFvCdE','10.244.244.128'}
+        -- получаем карты для класса Hosts и выводим их в stdout
+        print(test:get_card_list('Hosts')) 
+
+      Пример работы как со скриптом:
+        # авторизовываем в CMDBuild и запрашиваем карты для класса Hosts
+        lua src/cmdbuild.lua -u admin -p '3$rFvCdE' -i 10.244.244.128 -g Hosts
+
+        # а теперь используем фильтр CMDBuild для выбора нужной карточки, для класса Hosts
+        # где -f Id EQUALS 1392123 это {name='Id',operator='EQUALS',value=1392123} данный фильтр описан в документации
+        lua src/cmdbuild.lua -u admin -p '3$rFvCdE' -i 10.244.244.128 -g Hosts -f Id EQUALS 1392123
+        
+        # а теперь выгрузим дерево зависимостей для класс Hosts (внимание! работает только для классов Hosts & Templates (модель Казниие Инновейшен))
+        lua src/cmdbuild.lua -u admin -p '3$rFvCdE' -i 10.244.244.128 -g Hosts -D
+    ]]
+    :epilog "Для получения дополнительной информации, посетите https://bitbucket.org/enlab/cmdbuild_soap_api"
+  parser:flag("-l --list", "Распечатать существующие методы")
+  parser:option("-u --username", "Имя пользователя для подключения к CMDBuild")
+  parser:option("-p --password", "Пароль для подключения к CMDBuild")
+  parser:option("-i --ip", "IP адресс для подключения к CMDBuild")
+  parser:option("-g --get_card_list", "Название выгружаемого класса, (пример: Hosts)", nil)
+  parser:option("-c --card_id", "Идентификатор выгружаемой карты", nil)
+  parser:option("-f --filter", "Фильтр для выгружаемых карт, (пример: hostid EQUALS or LIKE 1328439)"):args("*")
+  parser:option("-F --format", "Формат вывода в stdout (xml или json)", 'json')
   parser:flag'-v --verbose'
   parser:flag'-d --debug'
-  parser:flag('-D --dependencies', 'Работает только с классами Templates & Hosts для модели КБ Промсвязь, вывод только в JSON т.к. таблицы модифицируется до неузнаваемости')
+  parser:flag('-D --dependencies', 'Выгрузка зависимостей для классов Hosts & Templates и формирование JSON структуры (xml не поддерживается)')
 
   local args = parser:parse()
   if args.list then dump("CMDBuild", CMDBuild) end
@@ -1430,7 +1450,7 @@ function main()
         ------------------------------------------------------------------------
         --         Name:  kazniie_model
         --      Purpose:  
-        --  Description:  Only my models
+        --  Description:  Only Kazniie Innovation models
         --   Parameters:  name - classname (string)
         --      Returns:  table
         ------------------------------------------------------------------------
@@ -1439,14 +1459,10 @@ function main()
           local Hosts = {}
           Hosts = decode(cmdbuild:get_card_list(name, nil, filter))
           for k, v in pairs(Hosts.Id) do
-            local Items = decode(cmdbuild:get_card_list("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Items"] = Items
-            local Triggers = decode(cmdbuild:get_card_list("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Triggers"] = Triggers
-            local Applications = decode(cmdbuild:get_card_list("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Applications"] = Applications
+            Hosts.Id[k]["Items"] = decode(cmdbuild:get_card_list("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Triggers"] = decode(cmdbuild:get_card_list("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Applications"] = decode(cmdbuild:get_card_list("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
           end
-
           return cjson.encode(Hosts)
         end
 
@@ -1457,7 +1473,6 @@ function main()
         elseif args.dependencies and args.get_card_list == 'templates' then
           resp = kazniie_model("templates", 'hostid', filter)
         else
-          print(args.get_card_list)
           resp = cmdbuild:get_card_list(args.get_card_list, nil, filter)
         end
       end
@@ -1476,4 +1491,5 @@ function main()
   end
 end
 main()
+
 return CMDBuild
