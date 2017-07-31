@@ -62,10 +62,13 @@ local wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-s
 local wssu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 local PassText="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
 
+local Utils={}
 local CMDBuild = {}
 local mt = { __index = CMDBuild }
+
+
 ------------------------------------------------------------------------
--- @name:  pretty
+-- @name:  Utils.pretty
 -- @purpose:  
 -- @description:  Format pretty JSON string
 -- @params: dt - jsonstring (string)
@@ -76,7 +79,7 @@ local mt = { __index = CMDBuild }
 -- @returns: pretty (string)
 ------------------------------------------------------------------------
 
-pretty = function(dt, lf, id, ac, ec)
+function Utils.pretty(dt, lf, id, ac, ec)
   local s, e = (ec or enc)(dt)
   if not s then 
     return s, e 
@@ -121,7 +124,6 @@ pretty = function(dt, lf, id, ac, ec)
   return tconcat(r)
 end
 
-local Utils={}
 ------------------------------------------------------------------------
 -- @name:  Utils.isempty
 -- @purpose:  
@@ -150,45 +152,15 @@ function Utils.isin(tab,what)
   return false
 end
 
-
 ------------------------------------------------------------------------
--- @name:  isempty
+-- @name:  CMDBuild:decode
 -- @purpose:  
--- @description:  {+DESCRIPTION+}
--- @params:  s - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
-------------------------------------------------------------------------
-
-local function isempty(s)
-  return (type(s) == "table" and next(s) == nil) or s == nil or s == ''
-end
-
-------------------------------------------------------------------------
--- @name:  isin
--- @purpose:  
--- @description:  {+DESCRIPTION+}
--- @params:  tab - {+DESCRIPTION+} ({+TYPE+})
---                what - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
-------------------------------------------------------------------------
-
-local function isin(tab,what)
-  if isempty(tab) then return false end
-  for i=1,#tab do if tab[i] == what then return true end end
-  return false
-end
-
-
-
-------------------------------------------------------------------------
--- @name:  decode
--- @purpose:  
--- @description:  {+DESCRIPTION+}
+-- @description:  SOAP to Lua Table
 -- @params:  xmltab - SOAP response (string)
--- @returns:  Table
+-- @returns:  outtab (table)
 ------------------------------------------------------------------------
 
-local function decode(xmltab)
+function CMDBuild:decode(xmltab)
   local outtab={}
   outtab["Id"]={}
   if not xmltab then return end
@@ -206,7 +178,7 @@ local function decode(xmltab)
           local key=attrList:find("ns2:name")
           local value=attrList:find("ns2:value") or ""
           local code=attrList:find("ns2:code") or ""
-          if key ~= nil and not isin(ignoreFields,key[1])
+          if key ~= nil and not Utils.isin(ignoreFields,key[1])
           then
             key = key[1]
             value = value[1]
@@ -1518,13 +1490,21 @@ end
 ------------------------------------------------------------------------
 -- @name:  dump
 -- @purpose:  
--- @description:  {+DESCRIPTION+}
--- @params: prefix - {+DESCRIPTION+} ({+TYPE+})
--- @params: a - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
+-- @description:  output to stdout all the global functions
+-- @params: prefix - name class (string)
+-- @params: a - class (table)
+-- @returns:  string
 ------------------------------------------------------------------------
 
 local function dump (prefix, a) 
+  ------------------------------------------------------------------------
+  -- @name: getArgs
+  -- @purpose: 
+  -- @description: search and print stdout all arguments for to all methods
+  -- @params: fun - name function (function)
+  -- @returns: args (table)
+  ------------------------------------------------------------------------
+
   local function getArgs(fun)
     local args = {}
     local hook = debug.gethook()
@@ -1628,11 +1608,11 @@ local function main()
 
         local function kazniie_model(name, filtername, filter)
           local Hosts = {}
-          Hosts = decode(cmdbuild:getCardList(name, nil, filter))
+          Hosts = cmdbuild:decode(cmdbuild:getCardList(name, nil, filter))
           for k, v in pairs(Hosts.Id) do
-            Hosts.Id[k]["Items"] = decode(cmdbuild:getCardList("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Triggers"] = decode(cmdbuild:getCardList("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Applications"] = decode(cmdbuild:getCardList("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Items"] = cmdbuild:decode(cmdbuild:getCardList("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Triggers"] = cmdbuild:decode(cmdbuild:getCardList("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
+            Hosts.Id[k]["Applications"] = cmdbuild:decode(cmdbuild:getCardList("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
           end
           return cjson.encode(Hosts)
         end
@@ -1652,15 +1632,16 @@ local function main()
         print(resp)
       elseif args.format == 'xml' and args.dependencies then
         Log.warn('Вывод возможен лишь в JSON формате', args.debug)
-        print(pretty(cjson.decode(resp)))
+        print(Utils.pretty(cjson.decode(resp)))
       elseif args.format == 'json' and args.dependencies then
-        print(pretty(cjson.decode(resp)))
+        print(Utils.pretty(cjson.decode(resp)))
       else
-        print(pretty(decode(resp)))
+        print(Utils.pretty(cmdbuild:decode(resp)))
       end
     end
   end
 end
+
 main()
 
 return CMDBuild
