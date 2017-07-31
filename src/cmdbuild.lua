@@ -42,43 +42,20 @@ local gsub, strfind, strformat = string.gsub, string.find, string.format
 local max = require"math".max
 local ltn12 = require("ltn12")
 local client = { http = require("socket.http"), }
+local serialize
+local XML = xml
+local Header = nil
+local CMDBuild = {}
+local mt = { __index = CMDBuild }
+local Utils={}
 local xml_header_template = '<?xml version="1.0"?>'
 local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
 local mandatory_url = "Field `url' is mandatory"
 local invalid_args = "Supported SOAP versions: 1.1 and 1.2.  The presence of soapaction field is mandatory for SOAP version 1.1.\nsoapversion, soapaction = "
 local suggested_layers = { http = "socket.http", https = "ssl.https", }
-local tescape = {
-	['&'] = '&amp;', ['<'] = '&lt;', ['>'] = '&gt;', ['"'] = '&quot;', ["'"] = '&apos;',
-}
-local tunescape = {
-	['&amp;'] = '&', ['&lt;'] = '<', ['&gt;'] = '>', ['&quot;'] = '"', ['&apos;'] = "'",
-}
-local serialize
-local XML = xml
-local header_template = { tag = "soap:Header", }
-local envelope_template = {
-	tag = "soap:Envelope",
-	attr = { "xmlns:soap", "xmlns:soap1",
-		["xmlns:soap1"] = "http://soap.services.cmdbuild.org", -- to be filled
-		["xmlns:soap"] = "http://schemas.xmlsoap.org/soap/encoding/",
-	},
-	{
-		tag = "soap:Body",
-		[1] = {
-			tag = nil, -- must be filled
-			attr = {}, -- must be filled
-		},
-	}
-}
-local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
-local xmlns_soap12 = "http://www.w3.org/2003/05/soap-envelope"
-local Header = nil
 local wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
 local wssu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 local PassText="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
-local CMDBuild = {}
-local mt = { __index = CMDBuild }
-local Utils={}
 
 ------------------------------------------------------------------------
 -- @name:  pretty
@@ -191,29 +168,6 @@ local function isin(tab,what)
   return false
 end
 
-------------------------------------------------------------------------
--- @name:  escape
--- @purpose:  
--- @description:  Escape special characters
--- @params:  text - string to modify (string)
--- @returns:  Modified string
-------------------------------------------------------------------------
-
-local function escape (text)
-	return (gsub (text, "([&<>'\"])", tescape))
-end
-
-------------------------------------------------------------------------
--- @name:  unescape
--- @purpose:  
--- @description:  Unescape special characters
--- @params:  text - string to modify (string)
--- @returns:  Modified string
-------------------------------------------------------------------------
-
-local function unescape (text)
-	return (gsub (text, "(&%a+%;)", tunescape))
-end
 
 
 ------------------------------------------------------------------------
@@ -1237,6 +1191,20 @@ function CMDBuild:call(args)
   ------------------------------------------------------------------------
 
   local function encode (args)
+    local envelope_template = {
+      tag = "soap:Envelope",
+      attr = { "xmlns:soap", "xmlns:soap1",
+        ["xmlns:soap1"] = "http://soap.services.cmdbuild.org", -- to be filled
+        ["xmlns:soap"] = "http://schemas.xmlsoap.org/soap/encoding/",
+      },
+      {
+        tag = "soap:Body",
+        [1] = {
+          tag = nil, -- must be filled
+          attr = {}, -- must be filled
+        },
+      }
+    }
     ------------------------------------------------------------------------
     -- @name:  contents
     -- @purpose:  
@@ -1266,6 +1234,12 @@ function CMDBuild:call(args)
     ------------------------------------------------------------------------
 
     serialize = function (obj)
+      local tescape = {
+        ['&'] = '&amp;', ['<'] = '&lt;', ['>'] = '&gt;', ['"'] = '&quot;', ["'"] = '&apos;',
+      }
+      local tunescape = {
+        ['&amp;'] = '&', ['&lt;'] = '<', ['&gt;'] = '>', ['&quot;'] = '"', ['&apos;'] = "'",
+      }
       ------------------------------------------------------------------------
       -- @name:  attrs
       -- @purpose:  
@@ -1296,6 +1270,31 @@ function CMDBuild:call(args)
           end
         end
       end
+
+      ------------------------------------------------------------------------
+      -- @name:  escape
+      -- @purpose:  
+      -- @description:  Escape special characters
+      -- @params:  text - string to modify (string)
+      -- @returns:  Modified string
+      ------------------------------------------------------------------------
+
+      local function escape (text)
+        return (gsub (text, "([&<>'\"])", tescape))
+      end
+
+      ------------------------------------------------------------------------
+      -- @name:  unescape
+      -- @purpose:  
+      -- @description:  Unescape special characters
+      -- @params:  text - string to modify (string)
+      -- @returns:  Modified string
+      ------------------------------------------------------------------------
+
+      local function unescape (text)
+        return (gsub (text, "(&%a+%;)", tunescape))
+      end
+
       local tt = type(obj)
       if tt == "string" then
         return escape(unescape(obj))
@@ -1319,6 +1318,9 @@ function CMDBuild:call(args)
     --                header - template header (table)
     -- @returns:  header_template (table)
     ------------------------------------------------------------------------
+    local header_template = { tag = "soap:Header", }
+    local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
+    local xmlns_soap12 = "http://www.w3.org/2003/05/soap-envelope"
 
     local function insert_header (obj, header)
       -- removes old header
