@@ -1,28 +1,28 @@
 --- vim: ts=2 tabstop=2 shiftwidth=2 expandtab
 --
 --------------------------------------------------------------------------------
---         File:  CMDBuild.lua
+-- @file:  CMDBuild.lua
 --
---        Usage:  ./CMDBuild.lua
+-- @usage:  ./CMDBuild.lua
 --
 -- @description:  Библиотека для работы с CMDBuild SOAP API
 --
---      Options:  ---
--- Requirements:  LuaXML, LuaSocket, LuaSec, lib/{base64.lua,ArgParse.lua,Log.lua}
---         Bugs:  ---
---        Notes:  ---
---       Author:  Alex M.A.K. (Mr), <alex-m.a.k@yandex.kz>
--- Organization:  Kazniie Innovation Ltd.
---      Version:  1.0
---      Created:  07/24/2017
---     Revision:  ---
+-- @options:  ---
+-- @requirements:  LuaXML, LuaSocket, LuaSec, lib/{base64.lua,ArgParse.lua,Log.lua}
+-- @bugs:  ---
+-- @notes:  ---
+-- @author:  Alex M.A.K. (Mr), <alex-m.a.k@yandex.kz>
+-- @organization:  Kazniie Innovation Ltd.
+-- @version:  1.0
+-- @created:  07/24/2017
+-- @revision:  ---
 --------------------------------------------------------------------------------
 --
 
--- todo: добавить обработчик ошибок
--- todo: добавить описание методов и аргументов
--- todo: избавиться от повторяющихся действий
--- todo: причесать код (это мелочь, но все таки нужна мелочь)
+-- @todo: добавить обработчик ошибок
+-- @todo: ВАЖНО! дописать описание методов и аргументов
+-- @todo: избавиться от повторяющихся действий
+-- @todo: причесать код (это мелочь, но все таки нужна мелочь)
 --
 
 require "luarocks.loader"
@@ -215,157 +215,6 @@ local function unescape (text)
 	return (gsub (text, "(&%a+%;)", tunescape))
 end
 
-------------------------------------------------------------------------
--- @name:  attrs
--- @purpose:  
--- @description:  Serialize the table of attributes
--- @params:  a - Table with the attributes of an element (table)
--- @returns:  String representation of the object
-------------------------------------------------------------------------
-
-local function attrs (a)
-	if not a then
-		return "" -- no attributes
-	else
-		local c = {}
-		if a[1] then
-			for i = 1, #a do
-				local v = a[i]
-				c[i] = strformat ("%s=%q", v, a[v])
-			end
-		else
-			for i, v in pairs (a) do
-				c[#c+1] = strformat ("%s=%q", i, v)
-			end
-		end
-		if #c > 0 then
-			return " "..tconcat (c, " ")
-		else
-			return ""
-		end
-	end
-end
-
-------------------------------------------------------------------------
--- @name:  contents
--- @purpose:  
--- @description:  Serialize the children of an object
--- @params:  obj - Table with the object to be serialized (table)
--- @returns:  String representation of the children
-------------------------------------------------------------------------
-
-local function contents (obj)
-	if not obj[1] then
-		return ""
-	else
-		local c = {}
-		for i = 1, #obj do
-			c[i] = serialize (obj[i])
-		end
-		return tconcat (c)
-	end
-end
-
-------------------------------------------------------------------------
--- @name:  serialize
--- @purpose:  
--- @description:  Serialize an object
--- @params:  obj - Table with the object to be serialized (table)
--- @returns:  String with representation of the object
-------------------------------------------------------------------------
-
-serialize = function (obj)
-	local tt = type(obj)
-	if tt == "string" then
-		return escape(unescape(obj))
-	elseif tt == "number" then
-		return obj
-	elseif tt == "table" then
-		local t = obj.tag
-		assert (t, "Invalid table format (no `tag' field)")
-		return strformat ("<%s%s>%s</%s>", t, attrs(obj.attr), contents(obj), t)
-	else
-		return ""
-	end
-end
-
-------------------------------------------------------------------------
--- @name:  find_xmlns
--- @purpose:  
--- @description:  {+DESCRIPTION+}
--- @params:  attr - Table of object's attributes (table)
--- @returns:  String with the value of the namespace ("xmlns") field.
-------------------------------------------------------------------------
-
-local function find_xmlns (attr)
-	for a, v in pairs (attr) do
-		if strfind (a, "xmlns", 1, 1) then
-			return v
-		end
-	end
-end
-
-------------------------------------------------------------------------
--- @name:  insert_header
--- @purpose:  
--- @description:  Add header element (if it exists) to object
---                Cleans old header element anywat
--- @params:  obj - {+DESCRIPTION+} (table)
---                header - template header (table)
--- @returns:  header_template (table)
-------------------------------------------------------------------------
-
-local function insert_header (obj, header)
-	-- removes old header
-	if obj[2] then
-		tremove (obj, 1)
-	end
-	if header then
-		header_template[1] = header
-		tinsert (obj, 1, header_template)
-	end
-end
-
-
-------------------------------------------------------------------------
--- @name:  encode
--- @purpose:  
--- @description:  Converts a LuaXml table into a SOAP message
--- @params:  args - Table with the arguments, which could be: (table)
---              namespace: String with the namespace of the elements.
---              method: String with the method's name;
---              entries: Table of SOAP elements (LuaExpat's format);
---              header: Table describing the header of the SOAP envelope (optional);
---              internal_namespace: String with the optional namespace used
---	as a prefix for the method name (default = "");
---              soapversion: Number of SOAP version (default = 1.1);
---                
--- @returns:  String with SOAP envelope element
-------------------------------------------------------------------------
-
-local function encode (args)
-	if tonumber(args.soapversion) == 1.2 then
-		envelope_template.attr["xmlns:soap"] = xmlns_soap12
-	else
-		envelope_template.attr["xmlns:soap"] = xmlns_soap
-	end
-	local xmlns = "xmlns"
-	if args.internal_namespace then
-		xmlns = xmlns..":"..args.internal_namespace
-		args.method = args.internal_namespace..":"..args.method
-	end
-	-- Cleans old header and insert a new one (if it exists).
-	insert_header (envelope_template, args.header)
-	-- Sets new body contents (and erase old content).
-	local body = (envelope_template[2] and envelope_template[2][1]) or envelope_template[1][1]
-	for i = 1, max (#body, #args.entries) do
-		body[i] = args.entries[i]
-	end
-	-- Sets method (actually, the table's tag) and namespace.
-	body.tag = args.method
-	body.attr[xmlns] = args.namespace
-	return serialize (envelope_template)
-end
 
 ------------------------------------------------------------------------
 -- @name:  decode
@@ -419,34 +268,6 @@ local function decode(xmltab)
     end
   end
   return outtab
-end
-
-------------------------------------------------------------------------
--- @name:  list_children
--- @purpose:  
--- @description:  Iterates over the children of an object.
--- It will ignore any text, so if you want all of the elements, use ipairs(obj).
--- @params:  obj - Table (LOM format) representing the XML object (table)
---                tag - String with the matching tag of the children or
--- nil to match only structured children (single strings are skipped) (string)
--- @returns:  Function to iterate over the children of the object
--- which returns each matching child
-------------------------------------------------------------------------
-
-local function list_children (obj, tag)
-	local i = 0
-	return function ()
-		i = i+1
-		local v = obj[i]
-		while v do
-			if type(v) == "table" and (not tag or v.tag == tag) then
-				return v
-			end
-			i = i+1
-			v = obj[i]
-		end
-		return nil
-	end
 end
 
 ------------------------------------------------------------------------
@@ -522,9 +343,7 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:deleteLookup
 -- @purpose:  
--- @description:  It deletes logically - in the identified class -
---  the pre-existing card with the identified "id".
---  It returns “true” if the operation went through.
+-- @description:  It deletes logically - in the identified class - the pre-existing card with the identified "id".  It returns “true” if the operation went through.
 -- @params:  lookup_id - {+DESCRIPTION+} (number)
 -- @returns:  boolean
 ------------------------------------------------------------------------
@@ -590,13 +409,7 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:getLookupList
 -- @purpose:  
--- @description:  It returns a complete list of Lookup values
---  corresponding to the specified "type".
---  If the "value" parameter is specified, only the
---  related heading is returned.
---  If “parentList” takes the “True” value, it returns
---  the complete hierarchy available for the
---  multilevel Lookup lists.
+-- @description:  It returns a complete list of Lookup values corresponding to the specified "type".  If the "value" parameter is specified, only the related heading is returned.  If “parentList” takes the “True” value, it returns the complete hierarchy available for the multilevel Lookup lists.
 -- @params: lookup_type - Name of the Lookup list which includes the current heading(string)
 -- @params: value - {+DESCRIPTION+} ({+TYPE+})
 -- @params: need_parent_list - {+DESCRIPTION+} ({+TYPE+})
@@ -868,17 +681,9 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:updateWorkflow
 -- @purpose:  
--- @description:  It updates the information of the card in the
---  specified process instance.
---  If the “CompleteTask” parameter takes the
---  “true” value, the process is advanced to the
---  following step.
---  It returns “true” if the operation went through
+-- @description:  It updates the information of the card in the specified process instance.  If the “CompleteTask” parameter takes the “true” value, the process is advanced to the following step.  It returns “true” if the operation went through
 -- @params:  process_id - {+DESCRIPTION+} ({+TYPE+})
--- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
--- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
--- The list includes also the ClassId (not the className)(table) 
--- ex.: {name='',value=''}
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.  They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.  The list includes also the ClassId (not the className)(table) ex.: {name='',value=''}
 -- @params: complete_task - boolean
 -- @returns:  boolean
 ------------------------------------------------------------------------
@@ -959,10 +764,9 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:downloadAttachment
 -- @purpose:  
--- @description:  It returns the file enclosed in the specified
---  card, which has the specified name.
+-- @description:  It returns the file enclosed in the specified card, which has the specified name.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: card_id - {+DESCRIPTION+} (number)
 -- @params filename - {+DESCRIPTION+} ({+TYPE+})
 -- @returns:  base64 (string)
 ------------------------------------------------------------------------
@@ -987,12 +791,9 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:deleteAttachment
 -- @purpose:  
--- @description:  It removes from the DMS Alfresco the file
---  enclosed in the specified card, which has the
---  specified name.
---  It returns “true” if the operation went through.
+-- @description:  It removes from the DMS Alfresco the file enclosed in the specified card, which has the specified name.  It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: card_id - {+DESCRIPTION+} (number)
 -- @params: filename - {+DESCRIPTION+} ({+TYPE+})
 -- @returns:  boolean
 ------------------------------------------------------------------------
@@ -1017,12 +818,9 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:updateAttachment
 -- @purpose:  
--- @description:  It updates the description of the file enclosed
---  in the specified card, which has the specified
---  name.
---  It returns “true” if the operation went through.
+-- @description:  It updates the description of the file enclosed in the specified card, which has the specified name.  It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: card_id - {+DESCRIPTION+} (number)
 -- @params: filename - {+DESCRIPTION+} ({+TYPE+})
 -- @params: description - {+DESCRIPTION+} ({+TYPE+})
 -- @returns:  boolean
@@ -1100,17 +898,15 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:updateCard
 -- @purpose:  
--- @description:  It updates a pre-existing card.
---  It returns “true” if the operation went
---  through.
+-- @description:  It updates a pre-existing card.  It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: card_id - {+DESCRIPTION+} (number)
 -- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
 -- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
 -- The list includes also the ClassId (not the className)(table) 
 -- ex.: {name='',value=''}
 -- @params: metadata - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
+-- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:updateCard(classname, card_id, attributes_list, metadata)
@@ -1157,8 +953,8 @@ end
 -- @purpose:  
 -- @description:  It deletes logically - in the identified class - the pre-existing card with the identified "id".  It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
+-- @params: card_id - {+DESCRIPTION+} (number)
+-- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteCard(classname, card_id)
@@ -1184,12 +980,12 @@ end
 -- @purpose:  
 -- @description:  It returns the required card with all attributes specified in “attributeList” (all card attributes if “attributeList” is null).
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
+-- @params: card_id - {+DESCRIPTION+} (number)
 -- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
 -- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
 -- The list includes also the ClassId (not the className)(table) 
 -- ex.: {name='',value=''}
--- @returns:  {+RETURNS+}
+-- @returns:  xml response (string)
 ------------------------------------------------------------------------
 
 function CMDBuild:getCard(classname, card_id, attributes_list)
@@ -1221,11 +1017,10 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:getCardHistory
 -- @purpose:  
--- @description:  It returns the list of the historicized
---  versions of the specified card.
+-- @description:  It returns the list of the historicized versions of the specified card.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: card_id - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
+-- @params: card_id - {+DESCRIPTION+} (number)
+-- @returns:  xml response (string)
 ------------------------------------------------------------------------
 
 function CMDBuild:getCardHistory(classname, card_id)
@@ -1258,7 +1053,7 @@ end
 -- @params: full_text_query - {+DESCRIPTION+} ({+TYPE+})
 -- @params: cql_query - {+DESCRIPTION+} ({+TYPE+})
 -- @params: cql_query_parameters - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
+-- @returns:  xml response (string)
 ------------------------------------------------------------------------
 
 function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
@@ -1411,19 +1206,153 @@ end
 -- @name: CMDBuild:call 
 -- @description: Call a remote method.
 -- @params: args Table with the arguments which could be:
--- url: String with the location of the server.
--- soapaction: String with the value of the SOAPAction header.
--- namespace: String with the namespace of the elements.
--- method: String with the method's name.
--- entries: Table of SOAP elements (LuaExpat's format).
--- header: Table describing the header of the SOAP-ENV (optional).
--- internal_namespace: String with the optional namespace used
+--          url: String with the location of the server.
+--          soapaction: String with the value of the SOAPAction header.
+--          namespace: String with the namespace of the elements.
+--          method: String with the method's name.
+--          entries: Table of SOAP elements (LuaExpat's format).
+--          header: Table describing the header of the SOAP-ENV (optional).
+--          internal_namespace: String with the optional namespace used
 --  as a prefix for the method name (default = "").
--- soapversion: Number with SOAP version (default = 1.1).
+--          soapversion: Number with SOAP version (default = 1.1).
 -- @return: String with namespace, String with method's name and
 --	Table with SOAP elements (LuaExpat's format).
 ---------------------------------------------------------------------
 function CMDBuild:call(args)
+  --- Здесь начинается черная магия и в двух словах ничего не объяснить
+  ------------------------------------------------------------------------
+  -- @name:  encode
+  -- @purpose:  
+  -- @description:  Converts a LuaXml table into a SOAP message
+  -- @params:  args - Table with the arguments, which could be: (table)
+  --              namespace: String with the namespace of the elements.
+  --              method: String with the method's name;
+  --              entries: Table of SOAP elements (LuaExpat's format);
+  --              header: Table describing the header of the SOAP envelope (optional);
+  --              internal_namespace: String with the optional namespace used
+  --	as a prefix for the method name (default = "");
+  --              soapversion: Number of SOAP version (default = 1.1);
+  --                
+  -- @returns:  String with SOAP envelope element
+  ------------------------------------------------------------------------
+
+  local function encode (args)
+    ------------------------------------------------------------------------
+    -- @name:  contents
+    -- @purpose:  
+    -- @description:  Serialize the children of an object
+    -- @params:  obj - Table with the object to be serialized (table)
+    -- @returns:  String representation of the children
+    ------------------------------------------------------------------------
+
+    local function contents (obj)
+      if not obj[1] then
+        return ""
+      else
+        local c = {}
+        for i = 1, #obj do
+          c[i] = serialize (obj[i])
+        end
+        return tconcat (c)
+      end
+    end
+
+    ------------------------------------------------------------------------
+    -- @name:  serialize
+    -- @purpose:  
+    -- @description:  Serialize an object
+    -- @params:  obj - Table with the object to be serialized (table)
+    -- @returns:  String with representation of the object
+    ------------------------------------------------------------------------
+
+    serialize = function (obj)
+      ------------------------------------------------------------------------
+      -- @name:  attrs
+      -- @purpose:  
+      -- @description:  Serialize the table of attributes
+      -- @params:  a - Table with the attributes of an element (table)
+      -- @returns:  String representation of the object
+      ------------------------------------------------------------------------
+
+      local function attrs (a)
+        if not a then
+          return "" -- no attributes
+        else
+          local c = {}
+          if a[1] then
+            for i = 1, #a do
+              local v = a[i]
+              c[i] = strformat ("%s=%q", v, a[v])
+            end
+          else
+            for i, v in pairs (a) do
+              c[#c+1] = strformat ("%s=%q", i, v)
+            end
+          end
+          if #c > 0 then
+            return " "..tconcat (c, " ")
+          else
+            return ""
+          end
+        end
+      end
+      local tt = type(obj)
+      if tt == "string" then
+        return escape(unescape(obj))
+      elseif tt == "number" then
+        return obj
+      elseif tt == "table" then
+        local t = obj.tag
+        assert (t, "Invalid table format (no `tag' field)")
+        return strformat ("<%s%s>%s</%s>", t, attrs(obj.attr), contents(obj), t)
+      else
+        return ""
+      end
+    end
+
+    ------------------------------------------------------------------------
+    -- @name:  insert_header
+    -- @purpose:  
+    -- @description:  Add header element (if it exists) to object
+    --                Cleans old header element anywat
+    -- @params:  obj - {+DESCRIPTION+} (table)
+    --                header - template header (table)
+    -- @returns:  header_template (table)
+    ------------------------------------------------------------------------
+
+    local function insert_header (obj, header)
+      -- removes old header
+      if obj[2] then
+        tremove (obj, 1)
+      end
+      if header then
+        header_template[1] = header
+        tinsert (obj, 1, header_template)
+      end
+    end
+    if tonumber(args.soapversion) == 1.2 then
+      envelope_template.attr["xmlns:soap"] = xmlns_soap12
+    else
+      envelope_template.attr["xmlns:soap"] = xmlns_soap
+    end
+    local xmlns = "xmlns"
+    if args.internal_namespace then
+      xmlns = xmlns..":"..args.internal_namespace
+      args.method = args.internal_namespace..":"..args.method
+    end
+    -- Cleans old header and insert a new one (if it exists).
+    insert_header (envelope_template, args.header)
+    -- Sets new body contents (and erase old content).
+    local body = (envelope_template[2] and envelope_template[2][1]) or envelope_template[1][1]
+    for i = 1, max (#body, #args.entries) do
+      body[i] = args.entries[i]
+    end
+    -- Sets method (actually, the table's tag) and namespace.
+    body.tag = args.method
+    body.attr[xmlns] = args.namespace
+    return serialize (envelope_template)
+  end
+
 	local soap_action, content_type_header
 	if (not args.soapversion) or tonumber(args.soapversion) == 1.1 then
 		soap_action = '"'..assert(args.soapaction, mandatory_soapaction)..'"'
@@ -1439,8 +1368,10 @@ function CMDBuild:call(args)
 	if args.encoding then
 		xml_header = xml_header:gsub('"%?>', '" encoding="'..args.encoding..'"?>')
 	end
+
 	local request_body = xml_header..encode(args)
   Log.debug(XML.eval(request_body), self._debug)
+
 	local request_sink, tbody = ltn12.sink.table()
 	local headers = {
 		["Content-Type"] = content_type_header,
@@ -1452,6 +1383,7 @@ function CMDBuild:call(args)
 			headers[h] = v
 		end
 	end
+
 	local url = {
 		url = assert(args.url, mandatory_url),
 		method = "POST",
@@ -1564,7 +1496,7 @@ local function main()
         # а теперь выгрузим дерево зависимостей для класс Hosts (внимание! работает только для классов Hosts & Templates (модель Казниие Инновейшен))
         lua src/cmdbuild.lua -u admin -p '3$rFvCdE' -i 10.244.244.128 -g Hosts -D
     ]]
-    :epilog "Для получения дополнительной информации, посетите https://bitbucket.org/enlab/cmdbuild_soap_api"
+    :epilog "Для получения дополнительной информации, читайте doc/CMDBuild_WebserviceManual_ENG_V240.pdf"
   parser:flag("-l --list", "Распечатать существующие методы")
   parser:option("-u --username", "Имя пользователя для подключения к CMDBuild")
   parser:option("-p --password", "Пароль для подключения к CMDBuild")
