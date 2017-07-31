@@ -25,29 +25,34 @@
 -- @todo: причесать код (это мелочь, но все таки нужна мелочь)
 --
 
+-- Подключаем luarocks чтобы не добавлять пути ручками
 require "luarocks.loader"
+-- Подключаем библиотеку для логгирования
 local Log = require'lib.Log'
+-- Подключаем библиотеку для работы с base64,
+-- нужна для работы с аттачментами
 local base64 = require'lib.base64'
+-- Подключаем библиотеку для работу с аргументами командной строки
 local argparse = require "lib.ArgParse"
-
+-- Подключаем библиотеку для работы с XML
 require'LuaXML'
-local ok, cjson = pcall(require, "cjson.safe")
-local enc = ok and cjson.encode or function() return nil, "Lua cJSON encoder not found" end
-local assert, error, pairs, tonumber, tostring, type = assert, error, pairs, tonumber, tostring, type
+local XML = xml
+-- Подключаем библиотеки для работы с таблицами и строками
 local table = require"table"
-local tconcat, tinsert, tremove = table.concat, table.insert, table.remove
 local string = require"string"
+-- Подключаем библиотеку для работы с JSON
+local ok, cjson = pcall(require, "cjson.safe")
+local enc = ok and cjson.encode or function() return nil, "Lua cJSON encoder not found: luarocks install cjson --local" end
+-- Создаем локальные копии необходимых функций Lua
+local assert, error, pairs, tonumber, tostring, type = assert, error, pairs, tonumber, tostring, type
+local tconcat, tinsert, tremove = table.concat, table.insert, table.remove
 local sub, rep = string.sub, string.rep
 local gsub, strfind, strformat = string.gsub, string.find, string.format
 local max = require"math".max
+-- Необходимо для работы с сетью
 local ltn12 = require("ltn12")
+-- Все для формирования SOAP requests
 local client = { http = require("socket.http"), }
-local serialize
-local XML = xml
-local Header = nil
-local CMDBuild = {}
-local mt = { __index = CMDBuild }
-local Utils={}
 local xml_header_template = '<?xml version="1.0"?>'
 local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
 local mandatory_url = "Field `url' is mandatory"
@@ -57,61 +62,66 @@ local wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-s
 local wssu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 local PassText="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
 
+local CMDBuild = {}
+local mt = { __index = CMDBuild }
 ------------------------------------------------------------------------
 -- @name:  pretty
 -- @purpose:  
--- @description:  cjson.encode pretty
--- @params: dt - {+DESCRIPTION+} ({+TYPE+})
+-- @description:  Format pretty JSON string
+-- @params: dt - jsonstring (string)
 -- @params: lf - {+DESCRIPTION+} ({+TYPE+})
 -- @params: id - {+DESCRIPTION+} ({+TYPE+})
 -- @params: ac - {+DESCRIPTION+} ({+TYPE+})
 -- @params: ec - {+DESCRIPTION+} ({+TYPE+})
--- @returns: pretty string
+-- @returns: pretty (string)
 ------------------------------------------------------------------------
 
 pretty = function(dt, lf, id, ac, ec)
-    local s, e = (ec or enc)(dt)
-    if not s then return s, e end
-    lf, id, ac = lf or "\n", id or "\t", ac or " "
-    local i, j, k, n, r, p, q  = 1, 0, 0, #s, {}, nil, nil
-    local al = sub(ac, -1) == "\n"
-    for x = 1, n do
-        local c = sub(s, x, x)
-        if not q and (c == "{" or c == "[") then
-            r[i] = p == ":" and tconcat{ c, lf } or tconcat{ rep(id, j), c, lf }
-            j = j + 1
-        elseif not q and (c == "}" or c == "]") then
-            j = j - 1
-            if p == "{" or p == "[" then
-                i = i - 1
-                r[i] = tconcat{ rep(id, j), p, c }
-            else
-                r[i] = tconcat{ lf, rep(id, j), c }
-            end
-        elseif not q and c == "," then
-            r[i] = tconcat{ c, lf }
-            k = -1
-        elseif not q and c == ":" then
-            r[i] = tconcat{ c, ac }
-            if al then
-                i = i + 1
-                r[i] = rep(id, j)
-            end
-        else
-            if c == '"' and p ~= "\\" then
-                q = not q and true or nil
-            end
-            if j ~= k then
-                r[i] = rep(id, j)
-                i, k = i + 1, j
-            end
-            r[i] = c
-        end
-        p, i = c, i + 1
+  local s, e = (ec or enc)(dt)
+  if not s then 
+    return s, e 
+  end
+  lf, id, ac = lf or "\n", id or "\t", ac or " "
+  local i, j, k, n, r, p, q  = 1, 0, 0, #s, {}, nil, nil
+  local al = sub(ac, -1) == "\n"
+  for x = 1, n do
+    local c = sub(s, x, x)
+    if not q and (c == "{" or c == "[") then
+      r[i] = p == ":" and tconcat{ c, lf } or tconcat{ rep(id, j), c, lf }
+      j = j + 1
+    elseif not q and (c == "}" or c == "]") then
+      j = j - 1
+      if p == "{" or p == "[" then
+        i = i - 1
+        r[i] = tconcat{ rep(id, j), p, c }
+      else
+        r[i] = tconcat{ lf, rep(id, j), c }
+      end
+    elseif not q and c == "," then
+      r[i] = tconcat{ c, lf }
+      k = -1
+    elseif not q and c == ":" then
+      r[i] = tconcat{ c, ac }
+      if al then
+        i = i + 1
+        r[i] = rep(id, j)
+      end
+    else
+      if c == '"' and p ~= "\\" then
+        q = not q and true or nil
+      end
+      if j ~= k then
+        r[i] = rep(id, j)
+        i, k = i + 1, j
+      end
+      r[i] = c
     end
-    return tconcat(r)
+    p, i = c, i + 1
+  end
+  return tconcat(r)
 end
 
+local Utils={}
 ------------------------------------------------------------------------
 -- @name:  Utils.isempty
 -- @purpose:  
@@ -228,27 +238,42 @@ end
 -- @name:  CMDBuild:new
 -- @purpose:  
 -- @description:  {+DESCRIPTION+}
--- @params:  credentials - {+DESCRIPTION+} ({+TYPE+})
+-- @params:  credentials - {+DESCRIPTION+} (table)
+--           username: (string)
+--           password: (sring)
+--           url or ip: (string)
+-- @params:  pid - {+DESCRIPTION+} (string or number)
+-- @params:  logcolor - {+DESCRIPTION+} (boolean)
+-- @params:  verbose - {+DESCRIPTION+} (boolean)
+-- @params:  _debug - {+DESCRIPTION+} (boolean)
 -- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:new(credentials, verbose, _debug)
-  Log.info('Создан новый инстанс', verbose)
-  Header = {
-    tag = "wsse:Security",
-    attr = { ["xmlns:wsse"] = wsse },
-    {
-      tag = "wsse:UsernameToken",
-      attr = { ["xmlns:wssu"] = wssu },
-      { tag = "wsse:Username", credentials.username or credentials[1] },
-      { tag = "wsse:Password", attr = { ["Type"] = PassText}, credentials.password or credentials[2] }
-    }
-  }
+function CMDBuild:new(credentials, pid, logcolor, verbose, _debug)
+  Log.pid = pid or 'cmdbuild_soap_api'
+  Log.usecolor = logcolor or false
+
+  if not Utils.isempty(credentials) then
+    Log.info('Создан новый инстанс', verbose)
+  else
+    Log.warn('Новый инстанс создать не удалос, отсутствуют входящие аргументы', verbose)
+    os.exit(1)
+  end
+
   return setmetatable(
     {
-      url = credentials.url or 
-        'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
-      verbose = verbose or false,
+      url = credentials.url or 'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
+      Header = {
+        tag = "wsse:Security",
+        attr = { ["xmlns:wsse"] = wsse },
+        {
+          tag = "wsse:UsernameToken",
+          attr = { ["xmlns:wssu"] = wssu },
+          { tag = "wsse:Username", credentials.username or credentials[1] },
+          { tag = "wsse:Password", attr = { ["Type"] = PassText}, credentials.password or credentials[2] }
+        }
+      },
+      verbose = verbose or true,
       _debug = _debug or false
     }, mt  
   )
@@ -257,7 +282,9 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:createLookup
 -- @purpose:  
--- @description:  It creates in the database a new heading of a data Lookup list containing information inserted in the “Lookup” object.  It returns the "id" identification attribute.
+-- @description: It creates in the database a new heading of a data Lookup list 
+-- containing information inserted in the “Lookup” object.
+-- It returns the "id" identification attribute.
 -- @params: lookup_type - Name of the Lookup list which includes the current heading (string)
 -- @params: code - Code of the Lookup heading (one single heading of a Lookup list).(string)
 -- @params: description - Description of the Lookup heading (one single heading of a Lookup list).(string)
@@ -273,7 +300,7 @@ function CMDBuild:createLookup(lookup_type, code, description, id, notes, parent
     url = self.url,
     soapaction = '',
     method = "soap1:createLookup",
-    header = Header, 
+    header = self.Header, 
     entries = {
       { tag = "soap1:lookup",	
         { tag = "soap1:code", code },
@@ -281,8 +308,15 @@ function CMDBuild:createLookup(lookup_type, code, description, id, notes, parent
       }
     }
   }
-  if id then table.insert(request.entries[1], { tag = "soap1:id", id}) end
-  if notes then table.insert(request.entries[1], { tag = "soap1:notes", notes}) end
+  
+  if id then 
+    table.insert(request.entries[1], { tag = "soap1:id", id}) 
+  end
+  
+  if notes then 
+    table.insert(request.entries[1], { tag = "soap1:notes", notes}) 
+  end
+  
   if parent_id and position then 
     table.insert(request.entries[1], { tag = "soap1:parent" })
     table.insert(request.entries[1], { tag = "soap1:parentId", parent_id })
@@ -297,9 +331,11 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:deleteLookup
 -- @purpose:  
--- @description:  It deletes logically - in the identified class - the pre-existing card with the identified "id".  It returns “true” if the operation went through.
--- @params:  lookup_id - {+DESCRIPTION+} (number)
--- @returns:  boolean
+-- @description: It deletes logically - in the identified class - 
+-- the pre-existing card with the identified "id".  
+-- It returns “true” if the operation went through.
+-- @params: lookup_id - {+DESCRIPTION+} (number)
+-- @returns: boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteLookup(lookup_id)
@@ -307,7 +343,7 @@ function CMDBuild:deleteLookup(lookup_id)
     url = self.url,
     soapaction = '',
     method = "soap1:deleteLookup",
-    header = Header, 
+    header = self.Header, 
     entries = {
       { tag = "soap1:lookup",	
         { tag = "soap1:lookupId", lookup_id },
@@ -339,7 +375,7 @@ function CMDBuild:updateLookup(lookup_type, code, description, id, notes, parent
     url = self.url,
     soapaction = '',
     method = "soap1:updateLookup",
-    header = Header, 
+    header = self.Header, 
     entries = {
       { tag = "soap1:lookup",	
         { tag = "soap1:code", code },
@@ -347,8 +383,15 @@ function CMDBuild:updateLookup(lookup_type, code, description, id, notes, parent
       }
     }
   }
-  if id then table.insert(request.entries[1], { tag = "soap1:id", id}) end
-  if notes then table.insert(request.entries[1], { tag = "soap1:notes", notes}) end
+
+  if id then 
+    table.insert(request.entries[1], { tag = "soap1:id", id}) 
+  end
+  
+  if notes then 
+    table.insert(request.entries[1], { tag = "soap1:notes", notes}) 
+  end
+  
   if parent_id and position then 
     table.insert(request.entries[1], { tag = "soap1:parent" })
     table.insert(request.entries[1], { tag = "soap1:parentId", parent_id })
@@ -363,11 +406,13 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:getLookupList
 -- @purpose:  
--- @description:  It returns a complete list of Lookup values corresponding to the specified "type".  If the "value" parameter is specified, only the related heading is returned.  If “parentList” takes the “True” value, it returns the complete hierarchy available for the multilevel Lookup lists.
+-- @description: It returns a complete list of Lookup values corresponding to the specified "type".
+-- If the "value" parameter is specified, only the related heading is returned.  
+-- If “parentList” takes the “True” value, it returns the complete hierarchy available for the multilevel Lookup lists.
 -- @params: lookup_type - Name of the Lookup list which includes the current heading(string)
 -- @params: value - {+DESCRIPTION+} ({+TYPE+})
 -- @params: need_parent_list - {+DESCRIPTION+} ({+TYPE+})
--- @returns:  {+RETURNS+}
+-- @returns: {+RETURNS+}
 ------------------------------------------------------------------------
 
 function CMDBuild:getLookupList(lookup_type, value, need_parent_list)
@@ -375,14 +420,19 @@ function CMDBuild:getLookupList(lookup_type, value, need_parent_list)
     url = self.url,
     soapaction = '',
     method = "soap1:getLookupList",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:type", lookup_type },
     }
   }
 
-  if value then table.insert(request.entries, { tag = "soap1:value", value}) end
-  if need_parent_list then table.insert(request.entries, {tag = "soap1:parentList", true}) end
+  if value then 
+    table.insert(request.entries, { tag = "soap1:value", value}) 
+  end
+  
+  if need_parent_list then 
+    table.insert(request.entries, {tag = "soap1:parentList", true}) 
+  end
   
   local resp = self:call(request)
   return XML.eval(resp):find'ns2:return'
@@ -401,7 +451,7 @@ function CMDBuild:getLookupById(lookup_id)
     url = self.url,
     soapaction = '',
     method = "soap1:getLookupById",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:id", lookup_id },
     }
@@ -424,7 +474,7 @@ function CMDBuild:getLookupTranslationById(lookup_id)
     url = self.url,
     soapaction = '',
     method = "soap1:callFunction",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:functionName", "dbic_get_lookup_trans_by_id" },
       { tag = "soap1:params",
@@ -441,7 +491,8 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:createRelation
 -- @purpose:  
--- @description:  It creates in the database a new relation between the pair of cards specified in the "Relation" object.  It returns “true” if the operation went through.
+-- @description:  It creates in the database a new relation between the pair of cards specified in the "Relation" object.  
+-- It returns “true” if the operation went through.
 -- @params: domain_name - Domain used for the relation. (string)
 -- @params: class1name - ClassName of the first card taking part in the relation (string)
 -- @params: card1Id - Identifier of the first card which takes part in the relation (number)
@@ -458,7 +509,7 @@ function CMDBuild:createRelation(domain_name, class1name, card1Id, class2name, c
     url = self.url,
     soapaction = '',
     method = "soap1:createRelation",
-    header = Header, 
+    header = self.Header, 
     entries = {
       { tag = "soap1:domainName", domain_name },
       { tag = "soap1:class1Name", class1name },
@@ -478,7 +529,8 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:deleteRelation
 -- @purpose:  
--- @description:  It deletes the existing relation between the pair of cards specified in the "Relation" object.  It returns “true” if the operation went through.
+-- @description:  It deletes the existing relation between the pair of cards specified in the "Relation" object. 
+-- It returns “true” if the operation went through.
 -- @params: domain_name - Domain used for the relation. (string)
 -- @params: class1name - ClassName of the first card taking part in the relation (string)
 -- @params: card1Id - Identifier of the first card which takes part in the relation (number)
@@ -542,7 +594,8 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:getRelationHistory
 -- @purpose:  
--- @description:  It returns the relation history of a card starting from a "Relation" object in which only "Class1Name" and "Card1Id" were defined.
+-- @description: It returns the relation history of a card starting from a "Relation" object 
+-- in which only "Class1Name" and "Card1Id" were defined.
 -- @params: domain_name - Domain used for the relation. (string)
 -- @params: class1name - ClassName of the first card taking part in the relation (string)
 -- @params: card1Id - Identifier of the first card which takes part in the relation (number)
@@ -580,7 +633,9 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:startWorkflow
 -- @purpose:  
--- @description:  It starts a new instance of the workflow described in the specified "Card".  If the “CompleteTask” parameter takes the “true” value, the process is advanced to the following step.  It returns the "id" identification attribute.
+-- @description: It starts a new instance of the workflow described in the specified "Card". 
+-- If the “CompleteTask” parameter takes the “true” value, the process is advanced to the following step.  
+-- It returns the "id" identification attribute.
 -- @params: classname - ClassName of the first card taking part in the relation (string)
 -- @params: attributes_list - {+DESCRIPTION+} ({+TYPE+})
 -- @params: metadata - {+DESCRIPTION+} ({+TYPE+})
@@ -595,7 +650,7 @@ function CMDBuild:startWorkflow(classname, attributes_list, metadata, complete_t
     url = self.url,
     soapaction = '',
     method = "soap1:startWorkflow",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:card",	
         { tag = "soap1:className", classname },
@@ -635,9 +690,13 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:updateWorkflow
 -- @purpose:  
--- @description:  It updates the information of the card in the specified process instance.  If the “CompleteTask” parameter takes the “true” value, the process is advanced to the following step.  It returns “true” if the operation went through
+-- @description: It updates the information of the card in the specified process instance.  
+-- If the “CompleteTask” parameter takes the “true” value, the process is advanced to the following step.
+-- It returns “true” if the operation went through
 -- @params:  process_id - {+DESCRIPTION+} ({+TYPE+})
--- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.  They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.  The list includes also the ClassId (not the className)(table) ex.: {name='',value=''}
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.  
+-- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management. 
+-- The list includes also the ClassId (not the className)(table) ex.: {name='',value=''}
 -- @params: complete_task - boolean
 -- @returns:  boolean
 ------------------------------------------------------------------------
@@ -649,7 +708,7 @@ function CMDBuild:updateWorkflow(process_id, attributes_list, complete_task)
     url = self.url,
     soapaction = '',
     method = "soap1:startWorkflow",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:card",	
         { tag = "soap1:processId", process_id }
@@ -679,7 +738,9 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:uploadAttachment
 -- @purpose:  
--- @description:  It uploads the specified file in the DMS Alfresco and the relating connection to the CMDBuild card belonging to the “className” class and having the “id” identification.  It returns “true” if the operation went through.
+-- @description:  It uploads the specified file in the DMS Alfresco and the relating connection
+-- to the CMDBuild card belonging to the “className” class and having the “id” identification.  
+-- It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
 -- @params: card_id - {+DESCRIPTION+} (number)
 -- @params: file - {+DESCRIPTION+} (string)
@@ -745,7 +806,8 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:deleteAttachment
 -- @purpose:  
--- @description:  It removes from the DMS Alfresco the file enclosed in the specified card, which has the specified name.  It returns “true” if the operation went through.
+-- @description:  It removes from the DMS Alfresco the file enclosed in the specified card, which has the specified name.  
+-- It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
 -- @params: card_id - {+DESCRIPTION+} (number)
 -- @params: filename - {+DESCRIPTION+} ({+TYPE+})
@@ -772,7 +834,8 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:updateAttachment
 -- @purpose:  
--- @description:  It updates the description of the file enclosed in the specified card, which has the specified name.  It returns “true” if the operation went through.
+-- @description:  It updates the description of the file enclosed in the specified card, which has the specified name. 
+-- It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
 -- @params: card_id - {+DESCRIPTION+} (number)
 -- @params: filename - {+DESCRIPTION+} ({+TYPE+})
@@ -801,7 +864,8 @@ end
 ------------------------------------------------------------------------
 --  @name: CMDBuild:createCard
 --  @urpose:  
---  @description:  It creates in the database a new card, containing the information inserted in the "Card" object.  It returns the "id" identification attribute.
+--  @description:  It creates in the database a new card, containing the information inserted in the "Card" object.
+--  It returns the "id" identification attribute.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
 -- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.
 -- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.
@@ -818,7 +882,7 @@ function CMDBuild:createCard(classname, attributes_list, metadata)
     url = self.url,
     soapaction = '',
     method = "soap1:createCard",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:cardType" }
     }
@@ -870,7 +934,7 @@ function CMDBuild:updateCard(classname, card_id, attributes_list, metadata)
     url = self.url,
     soapaction = '',
     method = "soap1:updateCard",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:card",
         { tag = "soap1:className", classname },
@@ -905,20 +969,19 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:deleteCard
 -- @purpose:  
--- @description:  It deletes logically - in the identified class - the pre-existing card with the identified "id".  It returns “true” if the operation went through.
+-- @description:  It deletes logically - in the identified class - the pre-existing card with the identified "id".  
+-- It returns “true” if the operation went through.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
 -- @params: card_id - {+DESCRIPTION+} (number)
 -- @returns:  boolean
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteCard(classname, card_id)
-  local attributes = {}
-
   local request = {
     url = self.url,
     soapaction = '',
     method = "soap1:deleteCard",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:className", classname },
       { tag = "soap1:cardId", card_id }
@@ -947,13 +1010,15 @@ function CMDBuild:getCard(classname, card_id, attributes_list)
     url = self.url,
     soapaction = '',
     method = "soap1:getCard",
-    header = Header,
+    header = self.Header,
     entries = { }
   }
+
   if classname then
     table.insert(request.entries, { tag = "soap1:className", classname })
   end
   table.insert(request.entries, { tag = "soap1:cardId", card_id })
+
   if attributes_list then
     for k, v in pairs(attributes_list) do
       table.insert(attributes, { tag = "soap1:attributeList", 
@@ -981,8 +1046,8 @@ function CMDBuild:getCardHistory(classname, card_id)
   local request = {
     url = self.url,
     soapaction = '',
-    method = "soap1:getCard",
-    header = Header,
+    method = "soap1:getCardHistory",
+    header = self.Header,
     entries = { 
       { tag = "soap1:className", classname },
       { tag = "soap1:cardId", card_id }
@@ -996,9 +1061,14 @@ end
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:getCardList
 -- @purpose:  
--- @description:  It returns the card list resulting from the specified query, completed with all attributes specified in “attributeList” (all card attributes if “attributeList” is null).  If the query is made on a superclass, the "className" attribute of the returned Card objects contains the name of the specific subclass the card belongs to, while in the attributeList it appears the ClassId of the same subclass.
+-- @description:  It returns the card list resulting from the specified query, completed with all attributes specified 
+-- in “attributeList” (all card attributes if “attributeList” is null).  
+-- If the query is made on a superclass, the "className" attribute of the returned Card objects contains the name of the specific subclass 
+-- the card belongs to, while in the attributeList it appears the ClassId of the same subclass.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
--- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.  They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management.  The list includes also the ClassId (not the className)(table) ex.: {name='',value=''}
+-- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.  
+-- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management. 
+-- The list includes also the ClassId (not the className)(table) ex.: {name='',value=''}
 -- @params: filter - It represents an atomic filter condition to select a card list. (table)
 -- @params: filter_sq_operator - It represents a concatenation of atomic filter conditions connected with an operator. (string)
 -- @params: order_type - It represents the ordering standard among the cards drawn from the filter query. (table)
@@ -1011,13 +1081,13 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
-  local attributes, orders, _limit = {}, {}, {}
+  local attributes, _limit = {}, {}
   Log.debug(string.format('Создаем запрос получения карт для класса: %s', classname), self._debug)
   local request = {
     url = self.url,
     soapaction = '',
     method = "soap1:getCardList",
-    header = Header,
+    header = self.Header,
     entries = {
       { tag = "soap1:className", classname },
     }
@@ -1095,11 +1165,10 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
   end
 
   if order_type then
-    orders = { tag = "soap1:orderType",
-      { tag = "soap1:columnName", order_type.columnName },
-      { tag = "soap1:type", order_type.type },
-    }
-    table.insert(request.entries, orders)
+    table.insert(request.entries, { tag = "soap1:orderType",
+        { tag = "soap1:columnName", order_type.columnName },
+        { tag = "soap1:type", order_type.type },
+    })
   end
 
   if limit then
@@ -1191,6 +1260,9 @@ function CMDBuild:call(args)
   ------------------------------------------------------------------------
 
   local function encode (args)
+    local serialize
+
+    -- Template SOAP Table
     local envelope_template = {
       tag = "soap:Envelope",
       attr = { "xmlns:soap", "xmlns:soap1",
@@ -1224,7 +1296,7 @@ function CMDBuild:call(args)
         return tconcat (c)
       end
     end
-
+    
     ------------------------------------------------------------------------
     -- @name:  serialize
     -- @purpose:  
@@ -1233,13 +1305,14 @@ function CMDBuild:call(args)
     -- @returns:  String with representation of the object
     ------------------------------------------------------------------------
 
-    serialize = function (obj)
+    serialize = function(obj)
       local tescape = {
         ['&'] = '&amp;', ['<'] = '&lt;', ['>'] = '&gt;', ['"'] = '&quot;', ["'"] = '&apos;',
       }
       local tunescape = {
         ['&amp;'] = '&', ['&lt;'] = '<', ['&gt;'] = '>', ['&quot;'] = '"', ['&apos;'] = "'",
       }
+
       ------------------------------------------------------------------------
       -- @name:  attrs
       -- @purpose:  
@@ -1315,8 +1388,8 @@ function CMDBuild:call(args)
     -- @description:  Add header element (if it exists) to object
     --                Cleans old header element anywat
     -- @params:  obj - {+DESCRIPTION+} (table)
-    --                header - template header (table)
-    -- @returns:  header_template (table)
+    --           header - template header (table)
+    -- @returns: header_template (table)
     ------------------------------------------------------------------------
     local header_template = { tag = "soap:Header", }
     local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
@@ -1332,11 +1405,13 @@ function CMDBuild:call(args)
         tinsert (obj, 1, header_template)
       end
     end
+
     if tonumber(args.soapversion) == 1.2 then
       envelope_template.attr["xmlns:soap"] = xmlns_soap12
     else
       envelope_template.attr["xmlns:soap"] = xmlns_soap
     end
+    
     local xmlns = "xmlns"
     if args.internal_namespace then
       xmlns = xmlns..":"..args.internal_namespace
@@ -1349,9 +1424,11 @@ function CMDBuild:call(args)
     for i = 1, max (#body, #args.entries) do
       body[i] = args.entries[i]
     end
+    
     -- Sets method (actually, the table's tag) and namespace.
     body.tag = args.method
     body.attr[xmlns] = args.namespace
+
     return serialize (envelope_template)
   end
 
@@ -1380,6 +1457,7 @@ function CMDBuild:call(args)
 		["Content-Length"] = tostring(request_body:len()),
 		["SOAPAction"] = soap_action,
 	}
+
 	if args.headers then
 		for h, v in pairs (args.headers) do
 			headers[h] = v
@@ -1400,7 +1478,28 @@ function CMDBuild:call(args)
 	local one_or_nil, status_code, headers, receive_status = request(url)
 	local body = tconcat(tbody)
 
+  ------------------------------------------------------------------------
+  -- @name: retriveMessage
+  -- @purpose: 
+  -- @description: {+DESCRIPTION+}
+  -- @params: response - cmdbuild response (string)
+  -- @returns: {+RETURNS+}
+  ------------------------------------------------------------------------
+
   local function retriveMessage(response)
+    ------------------------------------------------------------------------
+    -- @name: jtr
+    -- @purpose: 
+    -- @description: {+DESCRIPTION+}
+    -- @params: text_array - {+DESCRIPTION+} ({+TYPE+})
+    -- @returns: {+RETURNS+}
+    ------------------------------------------------------------------------
+
+    local function jtr(text_array)
+      local ret=""
+      for i = 1,#text_array do if text_array[i] then ret=ret..text_array[i]; end end
+      return ret;
+    end
     local resp=jtr(response)
     local istart,iend = resp:find('<soap:Envelope.*</soap:Envelope>');
     if(istart and iend) then
@@ -1408,12 +1507,6 @@ function CMDBuild:call(args)
     else
       return nil
     end
-  end
-
-  function jtr(text_array)
-    local ret=""
-    for i = 1,#text_array do if text_array[i] then ret=ret..text_array[i]; end end
-    return ret;
   end
 
 	local response = retriveMessage(tbody)
