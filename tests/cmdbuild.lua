@@ -19,15 +19,14 @@
 --------------------------------------------------------------------------------
 --
 
-local Gate = require'src.Gate'
-local t = Gate:new{
+local cmdbuild = require'src.cmdbuild'
+local t = cmdbuild:new({
   username = 'admin',
   password = '3$rFvCdE',
   ip = '10.244.244.128'
-}
+}, nil, nil, true, true)
 
-assert(t:auth(), 'авторизация не прошла, проверьте правильность настроек')
-local Hosts = t:loadCards('Hosts')
+local Hosts = t:decode(t:getCardList('Hosts'))
 assert(Hosts, 'не удалось получить карты для класса Hosts')
-local Templates = t:loadCards('templates')
+local Templates = t:decode(t:getCardList('templates'))
 assert(Templates, 'не удалось получить карты для класса Templates')
