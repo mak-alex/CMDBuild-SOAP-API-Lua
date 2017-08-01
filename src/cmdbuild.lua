@@ -1086,8 +1086,8 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
 
   if order_type then
     table.insert(request.entries, { tag = "soap1:orderType",
-        { tag = "soap1:columnName", order_type.columnName },
-        { tag = "soap1:type", order_type.type },
+      { tag = "soap1:columnName", order_type.columnName },
+      { tag = "soap1:type", order_type.type },
     })
   end
 
@@ -1163,28 +1163,34 @@ end
 ---------------------------------------------------------------------
 function CMDBuild:call(args)
   local xml_header_template = '<?xml version="1.0"?>'
-  --- Здесь начинается черная магия и в двух словах ничего не объяснить
+  local header_template = { tag = "soap:Header", }
+  local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
+  local xmlns_soap12 = "http://www.w3.org/2003/05/soap-envelope"
+  local mandatory_url = "Field `url' is mandatory"
+  local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
+  local invalid_args = "Supported SOAP versions: 1.1 and 1.2.  The presence of soapaction field is mandatory for SOAP version 1.1.\nsoapversion, soapaction = "
+
   ------------------------------------------------------------------------
   -- @name:  encode
   -- @purpose:  
   -- @description:  Converts a LuaXml table into a SOAP message
   -- @params:  args - Table with the arguments, which could be: (table)
-  --              namespace: String with the namespace of the elements.
-  --              method: String with the method's name;
-  --              entries: Table of SOAP elements (LuaExpat's format);
-  --              header: Table describing the header of the SOAP envelope (optional);
-  --              internal_namespace: String with the optional namespace used
+  --           namespace: String with the namespace of the elements.
+  --           method: String with the method's name;
+  --           entries: Table of SOAP elements (LuaExpat's format);
+  --           header: Table describing the header of the SOAP envelope (optional);
+  --           internal_namespace: String with the optional namespace used
   --	as a prefix for the method name (default = "");
-  --              soapversion: Number of SOAP version (default = 1.1);
+  --           soapversion: Number of SOAP version (default = 1.1);
   --                
-  -- @returns:  String with SOAP envelope element
+  -- @returns: String with SOAP envelope element
   ------------------------------------------------------------------------
 
   local function encode (args)
     local serialize
 
     -- Template SOAP Table
-    local envelope_template = {
+    local envelope_templ = {
       tag = "soap:Envelope",
       attr = { "xmlns:soap", "xmlns:soap1",
         ["xmlns:soap1"] = "http://soap.services.cmdbuild.org", -- to be filled
@@ -1312,12 +1318,6 @@ function CMDBuild:call(args)
     --           header - template header (table)
     -- @returns: header_template (table)
     ------------------------------------------------------------------------
-    local header_template = { tag = "soap:Header", }
-    local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
-    local xmlns_soap12 = "http://www.w3.org/2003/05/soap-envelope"
-    local mandatory_url = "Field `url' is mandatory"
-    local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
-    local invalid_args = "Supported SOAP versions: 1.1 and 1.2.  The presence of soapaction field is mandatory for SOAP version 1.1.\nsoapversion, soapaction = "
 
     local function insert_header (obj, header)
       -- removes old header
@@ -1331,9 +1331,9 @@ function CMDBuild:call(args)
     end
 
     if tonumber(args.soapversion) == 1.2 then
-      envelope_template.attr["xmlns:soap"] = xmlns_soap12
+      envelope_templ.attr["xmlns:soap"] = xmlns_soap12
     else
-      envelope_template.attr["xmlns:soap"] = xmlns_soap
+      envelope_templ.attr["xmlns:soap"] = xmlns_soap
     end
     
     local xmlns = "xmlns"
@@ -1341,10 +1341,12 @@ function CMDBuild:call(args)
       xmlns = xmlns..":"..args.internal_namespace
       args.method = args.internal_namespace..":"..args.method
     end
+
     -- Cleans old header and insert a new one (if it exists).
-    insert_header (envelope_template, args.header)
+    insert_header (envelope_templ, args.header)
+
     -- Sets new body contents (and erase old content).
-    local body = (envelope_template[2] and envelope_template[2][1]) or envelope_template[1][1]
+    local body = (envelope_templ[2] and envelope_templ[2][1]) or envelope_templ[1][1]
     for i = 1, math.max (#body, #args.entries) do
       body[i] = args.entries[i]
     end
@@ -1353,7 +1355,7 @@ function CMDBuild:call(args)
     body.tag = args.method
     body.attr[xmlns] = args.namespace
 
-    return serialize (envelope_template)
+    return serialize (envelope_templ)
   end
 
 	local soap_action, content_type_header
@@ -1364,7 +1366,9 @@ function CMDBuild:call(args)
 		soap_action = nil
 		content_type_header = "application/soap+xml"
 	else
-		assert(false, invalid_args..tostring(args.soapversion)..", "..tostring(args.soapaction))
+		assert(
+      false, invalid_args..tostring(args.soapversion)..", "..tostring(args.soapaction)
+    )
 	end
 
 	local xml_header = xml_header_template
@@ -1373,7 +1377,7 @@ function CMDBuild:call(args)
 	end
 
 	local request_body = xml_header..encode(args)
-  Log.debug(XML.eval(request_body), self._debug)
+  Log.debug('SOAP Request: '..tostring(XML.eval(request_body)), self._debug)
 
 	local request_sink, tbody = ltn12.sink.table()
 	local headers = {
@@ -1406,9 +1410,9 @@ function CMDBuild:call(args)
   ------------------------------------------------------------------------
   -- @name: retriveMessage
   -- @purpose: 
-  -- @description: {+DESCRIPTION+}
+  -- @description: The function truncates the additional information in the SOAP response
   -- @params: response - cmdbuild response (string)
-  -- @returns: {+RETURNS+}
+  -- @returns: soap response (string)
   ------------------------------------------------------------------------
 
   local function retriveMessage(response)
@@ -1425,6 +1429,7 @@ function CMDBuild:call(args)
       for i = 1,#text_array do if text_array[i] then ret=ret..text_array[i]; end end
       return ret;
     end
+
     local resp=jtr(response)
     local istart,iend = resp:find('<soap:Envelope.*</soap:Envelope>');
     if(istart and iend) then
@@ -1435,7 +1440,7 @@ function CMDBuild:call(args)
   end
 
   local response = retriveMessage(tbody)
-  Log.debug(XML.eval(response), self._debug)
+  Log.debug('SOAP Response: '..tostring(XML.eval(response)), self._debug)
 
   return response
 end
@@ -1594,7 +1599,9 @@ local function main()
   local args = parser:parse()
   if args.list then dump("CMDBuild", CMDBuild) end
   if args.username and args.password and args.ip then
-    local cmdbuild = CMDBuild:new({ args.username, args.password, args.ip }, args.verbose, args.debug)
+    local cmdbuild = CMDBuild:new(
+      { args.username, args.password, args.ip }, nil, nil, args.verbose, args.debug
+    )
     
     if args.getCardList then
       local filter, resp = nil, nil
