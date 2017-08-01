@@ -31,11 +31,10 @@
 require "luarocks.loader"
 -- Подключаем библиотеку для логгирования
 local Log = require'lib.Log'
--- Подключаем библиотеку для работы с base64,
--- нужна для работы с аттачментами
+-- Подключаем библиотеку для работы с base64, нужна для работы с аттачментами
 local base64 = require'lib.base64'
 -- Подключаем библиотеку для работу с аргументами командной строки
-local argparse = require "lib.ArgParse"
+local argparse = require "argparse"
 -- Подключаем библиотеку для работы с XML
 require'LuaXML'
 local XML = xml

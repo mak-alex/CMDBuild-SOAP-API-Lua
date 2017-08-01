@@ -2,11 +2,11 @@
 	doc/CMDBuild_WebserviceManual_ENG_V240.pdf 
 
 ##Required
-	luasocket 3.0rc1-2
-	luaxml 101012-2
-	bit32
+	luasocket 3.0rc1-2 - luarocks install luasocket --local
+	luaxml 101012-2 - luarocks install luaxml --local
+	bit32 - luarocks install bit32 --local
 	lib/base64.lua
-  	lib/ArgParse.lua
+  	argparse - luarocks install argparse --local
 
 ##Example
 ```
