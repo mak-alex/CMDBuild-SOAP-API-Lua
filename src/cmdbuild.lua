@@ -25,6 +25,8 @@
 -- @todo: причесать код (это мелочь, но все таки нужна мелочь)
 --
 
+--------------------------------------------------------------------------------
+--
 -- Подключаем luarocks чтобы не добавлять пути ручками
 require "luarocks.loader"
 -- Подключаем библиотеку для логгирования
@@ -37,36 +39,15 @@ local argparse = require "lib.ArgParse"
 -- Подключаем библиотеку для работы с XML
 require'LuaXML'
 local XML = xml
--- Подключаем библиотеки для работы с таблицами и строками
-local table = require"table"
-local string = require"string"
 -- Подключаем библиотеку для работы с JSON
-local ok, cjson = pcall(require, "cjson.safe")
-local enc = ok and cjson.encode or function() return nil, "Lua cJSON encoder not found: luarocks install cjson --local" end
--- Создаем локальные копии необходимых функций Lua
-local assert, error, pairs, tonumber, tostring, type = assert, error, pairs, tonumber, tostring, type
-local tconcat, tinsert, tremove = table.concat, table.insert, table.remove
-local sub, rep = string.sub, string.rep
-local gsub, strfind, strformat = string.gsub, string.find, string.format
-local max = require"math".max
+local cjson = require'cjson'
 -- Необходимо для работы с сетью
 local ltn12 = require("ltn12")
--- Все для формирования SOAP requests
 local client = { http = require("socket.http"), }
-local xml_header_template = '<?xml version="1.0"?>'
-local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
-local mandatory_url = "Field `url' is mandatory"
-local invalid_args = "Supported SOAP versions: 1.1 and 1.2.  The presence of soapaction field is mandatory for SOAP version 1.1.\nsoapversion, soapaction = "
-local suggested_layers = { http = "socket.http", https = "ssl.https", }
-local wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-local wssu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
-local PassText="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
+--
+--------------------------------------------------------------------------------
 
 local Utils={}
-local CMDBuild = {}
-local mt = { __index = CMDBuild }
-
-
 ------------------------------------------------------------------------
 -- @name:  Utils.pretty
 -- @purpose:  
@@ -80,48 +61,48 @@ local mt = { __index = CMDBuild }
 ------------------------------------------------------------------------
 
 function Utils.pretty(dt, lf, id, ac, ec)
-  local s, e = (ec or enc)(dt)
+  local s, e = (ec or cjson.encode)(dt)
   if not s then 
     return s, e 
   end
   lf, id, ac = lf or "\n", id or "\t", ac or " "
   local i, j, k, n, r, p, q  = 1, 0, 0, #s, {}, nil, nil
-  local al = sub(ac, -1) == "\n"
+  local al = string.sub(ac, -1) == "\n"
   for x = 1, n do
-    local c = sub(s, x, x)
+    local c = string.sub(s, x, x)
     if not q and (c == "{" or c == "[") then
-      r[i] = p == ":" and tconcat{ c, lf } or tconcat{ rep(id, j), c, lf }
+      r[i] = p == ":" and table.concat{ c, lf } or table.concat{ string.rep(id, j), c, lf }
       j = j + 1
     elseif not q and (c == "}" or c == "]") then
       j = j - 1
       if p == "{" or p == "[" then
         i = i - 1
-        r[i] = tconcat{ rep(id, j), p, c }
+        r[i] = table.concat{ string.rep(id, j), p, c }
       else
-        r[i] = tconcat{ lf, rep(id, j), c }
+        r[i] = table.concat{ lf, string.rep(id, j), c }
       end
     elseif not q and c == "," then
-      r[i] = tconcat{ c, lf }
+      r[i] = table.concat{ c, lf }
       k = -1
     elseif not q and c == ":" then
-      r[i] = tconcat{ c, ac }
+      r[i] = table.concat{ c, ac }
       if al then
         i = i + 1
-        r[i] = rep(id, j)
+        r[i] = string.rep(id, j)
       end
     else
       if c == '"' and p ~= "\\" then
         q = not q and true or nil
       end
       if j ~= k then
-        r[i] = rep(id, j)
+        r[i] = string.rep(id, j)
         i, k = i + 1, j
       end
       r[i] = c
     end
     p, i = c, i + 1
   end
-  return tconcat(r)
+  return table.concat(r)
 end
 
 ------------------------------------------------------------------------
@@ -146,66 +127,22 @@ end
 ------------------------------------------------------------------------
 
 function Utils.isin(tab,what)
-  if Utils.isempty(tab) then return false end
-  for i=1,#tab do if tab[i] == what then return true end end
+  if Utils.isempty(tab) then 
+    return false 
+  end
+  
+  for i=1,#tab do 
+    if tab[i] == what then 
+      return true 
+    end 
+  end
 
   return false
 end
 
-------------------------------------------------------------------------
--- @name:  CMDBuild:decode
--- @purpose:  
--- @description:  SOAP to Lua Table
--- @params:  xmltab - SOAP response (string)
--- @returns:  outtab (table)
-------------------------------------------------------------------------
 
-function CMDBuild:decode(xmltab)
-  local outtab={}
-  outtab["Id"]={}
-  if not xmltab then return end
-  for i=1,#xmltab
-  do
-    id=xmltab[i]:find("ns2:id")
-    if id ~= nil
-    then
-      id=id[1]
-      for j=1, #xmltab[i]
-      do
-        local attrList=xmltab[i][j]:find("ns2:attributeList")
-        if attrList ~= nil
-        then
-          local key=attrList:find("ns2:name")
-          local value=attrList:find("ns2:value") or ""
-          local code=attrList:find("ns2:code") or ""
-          if key ~= nil and not Utils.isin(ignoreFields,key[1])
-          then
-            key = key[1]
-            value = value[1]
-            code = code[1]
-
-            if outtab.Id[tostring(id)] == nil
-            then
-              outtab.Id[tostring(id)]={}
-            end
-            if code == nil
-            then
-              outtab.Id[tostring(id)][key]=value
-            else
-              outtab.Id[tostring(id)][key]={["value"]=value,["code"]=code}
-            end
-          end
-        end
-      end
-      if onCardLoad ~= nil
-      then
-        onCardLoad(outtab,tostring(id))
-      end
-    end
-  end
-  return outtab
-end
-
+local CMDBuild = {}
+local mt = { __index = CMDBuild }
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:new
 -- @purpose:  
@@ -222,6 +159,11 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:new(credentials, pid, logcolor, verbose, _debug)
+  local oasisopen = 'http://docs.oasis-open.org/wss/2004/01/'
+  local wsse=oasisopen.."oasis-200401-wss-wssecurity-secext-1.0.xsd"
+  local wssu=oasisopen.."oasis-200401-wss-wssecurity-utility-1.0.xsd"
+  local PassText=oasisopen.."oasis-200401-wss-username-token-profile-1.0#PasswordText"
+
   Log.pid = pid or 'cmdbuild_soap_api'
   Log.usecolor = logcolor or false
 
@@ -234,7 +176,8 @@ function CMDBuild:new(credentials, pid, logcolor, verbose, _debug)
 
   return setmetatable(
     {
-      url = credentials.url or 'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
+      url = credentials.url or 
+      'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
       Header = {
         tag = "wsse:Security",
         attr = { ["xmlns:wsse"] = wsse },
@@ -242,7 +185,12 @@ function CMDBuild:new(credentials, pid, logcolor, verbose, _debug)
           tag = "wsse:UsernameToken",
           attr = { ["xmlns:wssu"] = wssu },
           { tag = "wsse:Username", credentials.username or credentials[1] },
-          { tag = "wsse:Password", attr = { ["Type"] = PassText}, credentials.password or credentials[2] }
+          { tag = "wsse:Password", 
+            attr = { 
+              Type = PassText
+            },
+            credentials.password or credentials[2] 
+          }
         }
       },
       verbose = verbose or true,
@@ -259,7 +207,7 @@ end
 -- It returns the "id" identification attribute.
 -- @params: lookup_type - Name of the Lookup list which includes the current heading (string)
 -- @params: code - Code of the Lookup heading (one single heading of a Lookup list).(string)
--- @params: description - Description of the Lookup heading (one single heading of a Lookup list).(string)
+-- @params: description - Description of the Lookup heading (one single heading of a Lookup list) (string)
 -- @params: id - Lookup identification, it is automatically assigned by the database (number)
 -- @params: notes - Notes connected with the Lookup heading (string)
 -- @params: parent_id - Identification of the parent Lookup in the current heading (if applicable) (number)
@@ -1035,15 +983,15 @@ end
 -- @purpose:  
 -- @description:  It returns the card list resulting from the specified query, completed with all attributes specified 
 -- in “attributeList” (all card attributes if “attributeList” is null).  
--- If the query is made on a superclass, the "className" attribute of the returned Card objects contains the name of the specific subclass 
--- the card belongs to, while in the attributeList it appears the ClassId of the same subclass.
+-- If the query is made on a superclass, the "className" attribute of the returned Card objects contains the name of the specific string.subclass 
+-- the card belongs to, while in the attributeList it appears the ClassId of the same string.subclass.
 -- @params: classname - Class name which includes the card.  It corresponds to the table name in the database. (string)
 -- @params: attributes_list - Array of "Attribute" objects containing the values of additional custom attributes in the class.  
 -- They correspond to additional attributes defined in the CMDBuild Administration Module and available in the card management. 
 -- The list includes also the ClassId (not the className)(table) ex.: {name='',value=''}
--- @params: filter - It represents an atomic filter condition to select a card list. (table)
--- @params: filter_sq_operator - It represents a concatenation of atomic filter conditions connected with an operator. (string)
--- @params: order_type - It represents the ordering standard among the cards drawn from the filter query. (table)
+-- @params: filter - It string.represents an atomic filter condition to select a card list. (table)
+-- @params: filter_sq_operator - It string.represents a concatenation of atomic filter conditions connected with an operator. (string)
+-- @params: order_type - It string.represents the ordering standard among the cards drawn from the filter query. (table)
 -- @params: limit - the number of returned results (number)
 -- @params: offset - {+DESCRIPTION+} ({+TYPE+})
 -- @params: full_text_query - {+DESCRIPTION+} ({+TYPE+})
@@ -1214,6 +1162,7 @@ end
 --	Table with SOAP elements (LuaExpat's format).
 ---------------------------------------------------------------------
 function CMDBuild:call(args)
+  local xml_header_template = '<?xml version="1.0"?>'
   --- Здесь начинается черная магия и в двух словах ничего не объяснить
   ------------------------------------------------------------------------
   -- @name:  encode
@@ -1254,7 +1203,7 @@ function CMDBuild:call(args)
     -- @purpose:  
     -- @description:  Serialize the children of an object
     -- @params:  obj - Table with the object to be serialized (table)
-    -- @returns:  String representation of the children
+    -- @returns:  String string.representation of the children
     ------------------------------------------------------------------------
 
     local function contents (obj)
@@ -1265,7 +1214,7 @@ function CMDBuild:call(args)
         for i = 1, #obj do
           c[i] = serialize (obj[i])
         end
-        return tconcat (c)
+        return table.concat (c)
       end
     end
     
@@ -1274,7 +1223,7 @@ function CMDBuild:call(args)
     -- @purpose:  
     -- @description:  Serialize an object
     -- @params:  obj - Table with the object to be serialized (table)
-    -- @returns:  String with representation of the object
+    -- @returns:  String with string.representation of the object
     ------------------------------------------------------------------------
 
     serialize = function(obj)
@@ -1290,7 +1239,7 @@ function CMDBuild:call(args)
       -- @purpose:  
       -- @description:  Serialize the table of attributes
       -- @params:  a - Table with the attributes of an element (table)
-      -- @returns:  String representation of the object
+      -- @returns:  String string.representation of the object
       ------------------------------------------------------------------------
 
       local function attrs (a)
@@ -1301,15 +1250,15 @@ function CMDBuild:call(args)
           if a[1] then
             for i = 1, #a do
               local v = a[i]
-              c[i] = strformat ("%s=%q", v, a[v])
+              c[i] = string.format ("%s=%q", v, a[v])
             end
           else
             for i, v in pairs (a) do
-              c[#c+1] = strformat ("%s=%q", i, v)
+              c[#c+1] = string.format ("%s=%q", i, v)
             end
           end
           if #c > 0 then
-            return " "..tconcat (c, " ")
+            return " "..table.concat (c, " ")
           else
             return ""
           end
@@ -1325,7 +1274,7 @@ function CMDBuild:call(args)
       ------------------------------------------------------------------------
 
       local function escape (text)
-        return (gsub (text, "([&<>'\"])", tescape))
+        return (string.gsub (text, "([&<>'\"])", tescape))
       end
 
       ------------------------------------------------------------------------
@@ -1337,7 +1286,7 @@ function CMDBuild:call(args)
       ------------------------------------------------------------------------
 
       local function unescape (text)
-        return (gsub (text, "(&%a+%;)", tunescape))
+        return (string.gsub (text, "(&%a+%;)", tunescape))
       end
 
       local tt = type(obj)
@@ -1348,7 +1297,7 @@ function CMDBuild:call(args)
       elseif tt == "table" then
         local t = obj.tag
         assert (t, "Invalid table format (no `tag' field)")
-        return strformat ("<%s%s>%s</%s>", t, attrs(obj.attr), contents(obj), t)
+        return string.format ("<%s%s>%s</%s>", t, attrs(obj.attr), contents(obj), t)
       else
         return ""
       end
@@ -1366,15 +1315,18 @@ function CMDBuild:call(args)
     local header_template = { tag = "soap:Header", }
     local xmlns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
     local xmlns_soap12 = "http://www.w3.org/2003/05/soap-envelope"
+    local mandatory_url = "Field `url' is mandatory"
+    local mandatory_soapaction = "Field `soapaction' is mandatory for SOAP 1.1 (or you can force SOAP version with `soapversion' field)"
+    local invalid_args = "Supported SOAP versions: 1.1 and 1.2.  The presence of soapaction field is mandatory for SOAP version 1.1.\nsoapversion, soapaction = "
 
     local function insert_header (obj, header)
       -- removes old header
       if obj[2] then
-        tremove (obj, 1)
+        table.remove (obj, 1)
       end
       if header then
         header_template[1] = header
-        tinsert (obj, 1, header_template)
+        table.insert (obj, 1, header_template)
       end
     end
 
@@ -1393,7 +1345,7 @@ function CMDBuild:call(args)
     insert_header (envelope_template, args.header)
     -- Sets new body contents (and erase old content).
     local body = (envelope_template[2] and envelope_template[2][1]) or envelope_template[1][1]
-    for i = 1, max (#body, #args.entries) do
+    for i = 1, math.max (#body, #args.entries) do
       body[i] = args.entries[i]
     end
     
@@ -1443,12 +1395,13 @@ function CMDBuild:call(args)
 		sink = request_sink,
 		headers = headers,
 	}
-
+  
+  local suggested_layers = { http = "socket.http", https = "ssl.https", }
 	local protocol = url.url:match"^(%a+)" -- protocol's name
 	local mod = assert(client[protocol], '"'..protocol..'" protocol support unavailable. Try soap.CMDBuild:'..protocol..' = require"'..suggested_layers[protocol]..'" to enable it.')
 	local request = assert(mod.request, 'Could not find request function on module soap.CMDBuild:'..protocol)
 	local one_or_nil, status_code, headers, receive_status = request(url)
-	local body = tconcat(tbody)
+	local body = table.concat(tbody)
 
   ------------------------------------------------------------------------
   -- @name: retriveMessage
@@ -1481,10 +1434,64 @@ function CMDBuild:call(args)
     end
   end
 
-	local response = retriveMessage(tbody)
+  local response = retriveMessage(tbody)
   Log.debug(XML.eval(response), self._debug)
 
   return response
+end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:decode
+-- @purpose:  
+-- @description:  Convert SOAP response to Lua Table
+-- @params:  xmltab - SOAP response (string)
+-- @returns:  outtab (table)
+------------------------------------------------------------------------
+
+function CMDBuild:decode(xmltab)
+  local outtab={}
+  outtab["Id"]={}
+  if not xmltab then return end
+  for i=1,#xmltab
+  do
+    id=xmltab[i]:find("ns2:id")
+    if id ~= nil
+    then
+      id=id[1]
+      for j=1, #xmltab[i]
+      do
+        local attrList=xmltab[i][j]:find("ns2:attributeList")
+        if attrList ~= nil
+        then
+          local key=attrList:find("ns2:name")
+          local value=attrList:find("ns2:value") or ""
+          local code=attrList:find("ns2:code") or ""
+          if key ~= nil and not Utils.isin(ignoreFields,key[1])
+          then
+            key = key[1]
+            value = value[1]
+            code = code[1]
+
+            if outtab.Id[tostring(id)] == nil
+            then
+              outtab.Id[tostring(id)]={}
+            end
+            if code == nil
+            then
+              outtab.Id[tostring(id)][key]=value
+            else
+              outtab.Id[tostring(id)][key]={["value"]=value,["code"]=code}
+            end
+          end
+        end
+      end
+      if onCardLoad ~= nil
+      then
+        onCardLoad(outtab,tostring(id))
+      end
+    end
+  end
+  return outtab
 end
 
 ------------------------------------------------------------------------
@@ -1538,7 +1545,7 @@ local function dump (prefix, a)
   local function toCSV (tt)
     local s = ""
     for _,p in ipairs(tt) do  s = s .. ", " .. escapeCSV(p) end
-    return sub(s, 2)      -- remove first comma
+    return string.sub(s, 2)      -- remove first comma
   end
 
   for i,v in pairs (a) do
