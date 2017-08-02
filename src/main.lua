@@ -54,63 +54,61 @@ local function main()
   password = args.password
   ip = args.ip
 
-  if args.username and args.password and args.ip then
-    -- Создаем новый инстанс
-    local cmdbuild = CMDBuild:new(nil, nil, args.verbose, args.debug)
-    -- Добавляем пользователя и создаем SOAP заголовок
-    cmdbuild:set_credentials({ username=username, password=password, ip=ip }).insertHeader() 
+  -- Создаем новый инстанс
+  local cmdbuild = CMDBuild:new(nil, nil, args.verbose, args.debug)
+  -- Добавляем пользователя и создаем SOAP заголовок
+  cmdbuild:set_credentials({ username=username, password=password, ip=ip }).insertHeader() 
 
-    if args.getCardList then
-      local filter, resp = nil, nil
-      if args.filter then
-        filter={ name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
+  if args.getCardList then
+    local filter, resp = nil, nil
+    if args.filter then
+      filter={ name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
+    end
+
+    if args.card_id then
+      resp = cmdbuild:getCard(args.getCardList, args.card_id)
+    else
+      ------------------------------------------------------------------------
+      -- @name:  kazniie_model
+      -- @purpose:  
+      -- @description:  Only Kazniie Innovation models
+      -- @params:  name - classname (string)
+      -- @returns:  table
+      ------------------------------------------------------------------------
+
+      local function kazniie_model(name, filtername, filter)
+        local Hosts = {}
+        Hosts = cmdbuild:decode(cmdbuild:getCardList(name, nil, filter))
+        for k, v in pairs(Hosts.Id) do
+          Hosts.Id[k]["Items"] = cmdbuild:decode(cmdbuild:getCardList("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
+          Hosts.Id[k]["Triggers"] = cmdbuild:decode(cmdbuild:getCardList("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
+          Hosts.Id[k]["Applications"] = cmdbuild:decode(cmdbuild:getCardList("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
+        end
+        return cmdbuild.cjson.encode(Hosts)
       end
 
-      if args.card_id then
-        resp = cmdbuild:getCard(args.getCardList, args.card_id)
+      if args.getCardList == 'Templates' then args.getCardList = 'templates' end
+
+      if args.dependencies and args.getCardList == 'Hosts' then
+        resp = kazniie_model("Hosts", 'hostid', filter)
+      elseif args.dependencies and args.getCardList == 'templates' then
+        resp = kazniie_model("templates", 'hostid', filter)
       else
-        ------------------------------------------------------------------------
-        -- @name:  kazniie_model
-        -- @purpose:  
-        -- @description:  Only Kazniie Innovation models
-        -- @params:  name - classname (string)
-        -- @returns:  table
-        ------------------------------------------------------------------------
-
-        local function kazniie_model(name, filtername, filter)
-          local Hosts = {}
-          Hosts = cmdbuild:decode(cmdbuild:getCardList(name, nil, filter))
-          for k, v in pairs(Hosts.Id) do
-            Hosts.Id[k]["Items"] = cmdbuild:decode(cmdbuild:getCardList("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Triggers"] = cmdbuild:decode(cmdbuild:getCardList("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
-            Hosts.Id[k]["Applications"] = cmdbuild:decode(cmdbuild:getCardList("zapplications", nil, {name=filtername,operator='EQUALS',value=k}))
-          end
-          return cmdbuild.cjson.encode(Hosts)
-        end
-
-        if args.getCardList == 'Templates' then args.getCardList = 'templates' end
-
-        if args.dependencies and args.getCardList == 'Hosts' then
-          resp = kazniie_model("Hosts", 'hostid', filter)
-        elseif args.dependencies and args.getCardList == 'templates' then
-          resp = kazniie_model("templates", 'hostid', filter)
-        else
-          resp = cmdbuild:getCardList(args.getCardList, nil, filter)
-        end
+        resp = cmdbuild:getCardList(args.getCardList, nil, filter)
       end
+    end
 
-      if args.format == 'xml' and not args.dependencies then
-        print(resp)
-      elseif args.format == 'xml' and args.dependencies then
-        Log.warn('Вывод возможен лишь в JSON формате', args.debug)
+    if args.format == 'xml' and not args.dependencies then
+      print(resp)
+    elseif args.format == 'xml' and args.dependencies then
+      Log.warn('Вывод возможен лишь в JSON формате', args.debug)
+      print(cmdbuild.Utils.pretty(cmdbuild.cjson.decode(resp)))
+    elseif args.format == 'json' and args.dependencies then
+      if args.getCardList == 'Templates' or args.getCardList == 'Hosts' then
         print(cmdbuild.Utils.pretty(cmdbuild.cjson.decode(resp)))
-      elseif args.format == 'json' and args.dependencies then
-        if args.getCardList == 'Templates' or args.getCardList == 'Hosts' then
-          print(cmdbuild.Utils.pretty(cmdbuild.cjson.decode(resp)))
-        end
-      else
-        print(cmdbuild.Utils.pretty(cmdbuild:decode(resp)))
       end
+    else
+      print(cmdbuild.Utils.pretty(cmdbuild:decode(resp)))
     end
   end
 end

@@ -242,7 +242,8 @@ function CMDBuild:set_credentials (credentials)
       Log.debug('Added user name', self.verbose)
       self.username = credentials.username
     else
-      Log.warn('`credentials.username\' can\'t be empty')
+      Log.warn('`credentials.username\' can\'t be empty', self.verbose)
+      os.exit(-1)
     end
   end
 
@@ -251,7 +252,8 @@ function CMDBuild:set_credentials (credentials)
       Log.debug('Added a password for the user', self.verbose)
       self.password = credentials.password
     else
-      Log.warn('`credentials.password\' can\'t be empty')
+      Log.warn('`credentials.password\' can\'t be empty', self.verbose)
+      os.exit(-1)
     end
   end
   
@@ -263,7 +265,8 @@ function CMDBuild:set_credentials (credentials)
       Log.debug('CMDBuild address is formed and added', self.verbose)
       self.url = webservices:gsub('__ip__', credentials.ip)
     else
-      Log.warn('`credentials.ip\' can\'t be empty')
+      Log.warn('`credentials.ip\' can\'t be empty', self.verbose)
+      os.exit(-1)
     end
   end
 
@@ -289,7 +292,6 @@ function CMDBuild:set_credentials (credentials)
       return nil
     end
   end
-  
   return self.Header
 end  -----  end of function CMDBuild_mt:set_credentials  -----
 
