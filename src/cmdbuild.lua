@@ -1165,9 +1165,7 @@ end
 function CMDBuild:__call(method_name, params)
   local request = {}
   request.method = method_name
-  request.entries = {
-    params
-  }
+  request.entries = params
 
   local resp = self:call(request)
   local eval_resp = XML.eval(resp):find'ns2:return'
@@ -1227,7 +1225,7 @@ function CMDBuild:call(args)
       {
         tag = "soap:Body",
         [1] = {
-          tag = "", -- must be filled
+          tag = "soap1", -- must be filled
           attr = {}, -- must be filled
         },
       }
@@ -1594,8 +1592,7 @@ local function main()
 
         local function kazniie_model(name, filtername, filter)
           local Hosts = {}
-          Hosts = cmdbuild:__call('getCardList', { tag = 'soap1:classname', 'Hosts' })
-          --Hosts = cmdbuild:decode(cmdbuild:getCardList(name, nil, filter))
+          Hosts = cmdbuild:decode(cmdbuild:getCardList(name, nil, filter))
           for k, v in pairs(Hosts.Id) do
             Hosts.Id[k]["Items"] = cmdbuild:decode(cmdbuild:getCardList("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
             Hosts.Id[k]["Triggers"] = cmdbuild:decode(cmdbuild:getCardList("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
@@ -1611,7 +1608,21 @@ local function main()
         elseif args.dependencies and args.getCardList == 'templates' then
           resp = kazniie_model("templates", 'hostid', filter)
         else
-          resp = cmdbuild:getCardList(args.getCardList, nil, filter)
+          local filters = {}
+          if filter then
+            filters = { tag = "soap1:queryType",
+              { tag = "soap1:filter", 
+                { tag = "soap1:name", filter.name },
+                { tag = "soap1:operator", filter.operator },
+                { tag = "soap1:value", filter.value }
+              }
+            }
+          end
+          resp = cmdbuild:__call('getCardList', {
+            { tag = 'soap1:className', 'Hosts'}, 
+            filters 
+          })
+          --resp = cmdbuild:getCardList(args.getCardList, nil, filter)
         end
       end
 
