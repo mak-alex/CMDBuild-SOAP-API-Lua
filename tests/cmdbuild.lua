@@ -19,7 +19,7 @@
 --------------------------------------------------------------------------------
 --
 
-local cmdbuild = require'src.cmdbuild'
+local cmdbuild = require'lib.cmdbuild'
 local t = cmdbuild:new({
   username = 'admin',
   password = '3$rFvCdE',

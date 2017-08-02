@@ -18,9 +18,9 @@
 --------------------------------------------------------------------------------
 --
 -- Подключаем библиотеку для работы с CMDBuild SOAP API
-local cmdbuild = require'src.cmdbuild'
+local CMDBuild = require'lib.cmdbuild'
 -- Подключаем библиотеку для работу с аргументами командной строки
-local argparse = require "argparse"
+local argparse = require "lib.argparse"
 
 local function main()
   local parser = argparse()
@@ -50,9 +50,15 @@ local function main()
   parser:flag('-D --dependencies', 'Выгрузка зависимостей для классов Hosts & Templates и формирование JSON структуры (xml не поддерживается)')
 
   local args = parser:parse()
+  username = args.username
+  password = args.password
+  ip = args.ip
+
   if args.username and args.password and args.ip then
-    local cmdbuild = cmdbuild:new(nil, nil, args.verbose, args.debug)
-    cmdbuild:set_credentials({ username = args.username, password = args.password, ip = args.ip }).insertHeader() 
+    -- Создаем новый инстанс
+    local cmdbuild = CMDBuild:new(nil, nil, args.verbose, args.debug)
+    -- Добавляем пользователя и создаем SOAP заголовок
+    cmdbuild:set_credentials({ username=username, password=password, ip=ip }).insertHeader() 
 
     if args.getCardList then
       local filter, resp = nil, nil
@@ -89,21 +95,7 @@ local function main()
         elseif args.dependencies and args.getCardList == 'templates' then
           resp = kazniie_model("templates", 'hostid', filter)
         else
-          local filters = {}
-          if filter then
-            filters = { tag = "soap1:queryType",
-              { tag = "soap1:filter", 
-                { tag = "soap1:name", filter.name },
-                { tag = "soap1:operator", filter.operator },
-                { tag = "soap1:value", filter.value }
-              }
-            }
-          end
-          resp = cmdbuild:__call('getCardList', {
-            { tag = 'soap1:className', 'Hosts'}, 
-            filters 
-          })
-          --resp = cmdbuild:getCardList(args.getCardList, nil, filter)
+          resp = cmdbuild:getCardList(args.getCardList, nil, filter)
         end
       end
 
