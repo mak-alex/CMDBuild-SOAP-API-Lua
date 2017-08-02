@@ -139,14 +139,22 @@ function Utils.isin(tab,what)
   return false
 end
 
+function Utils.tsize(T)
+  local count = 0
+  for _ in pairs(T.Id) do
+    count = count + 1
+  end
+  return count
+end
 
 local CMDBuild = {}
+local webservices = 'http://__ip__/cmdbuild/services/soap/Webservices'
 local mt = { __index = CMDBuild }
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:new
 -- @purpose:  
 -- @description:  {+DESCRIPTION+}
--- @params:  credentials - {+DESCRIPTION+} (table)
+-- @params:  credentials - credentials table (table)
 --           username: (string)
 --           password: (sring)
 --           url or ip: (string)
@@ -157,46 +165,132 @@ local mt = { __index = CMDBuild }
 -- @returns:  {+RETURNS+}
 ------------------------------------------------------------------------
 
-function CMDBuild:new(credentials, pid, logcolor, verbose, _debug)
-  local oasisopen = 'http://docs.oasis-open.org/wss/2004/01/'
-  local wsse=oasisopen.."oasis-200401-wss-wssecurity-secext-1.0.xsd"
-  local wssu=oasisopen.."oasis-200401-wss-wssecurity-utility-1.0.xsd"
-  local PassText=oasisopen.."oasis-200401-wss-username-token-profile-1.0#PasswordText"
+function CMDBuild:new(pid, logcolor, verbose, _debug)
 
   Log.pid = pid or 'cmdbuild_soap_api'
   Log.usecolor = logcolor or false
 
-  if not Utils.isempty(credentials) then
-    Log.info('Создан новый инстанс', verbose)
-  else
-    Log.warn('Новый инстанс создать не удалос, отсутствуют входящие аргументы', verbose)
-    os.exit(1)
+  local obj = {}
+  obj.Header = {}
+  obj.username = nil
+  obj.password = nil
+  obj.url = nil
+  obj.verbose = verbose or true
+  obj._debug = _debug or false
+
+  return setmetatable(obj, mt)
+end
+
+------------------------------------------------------------------------
+-- @name:  CMDBuild:decode
+-- @purpose:  
+-- @description:  Convert SOAP response to Lua Table
+-- @params:  xmltab - SOAP response (string)
+-- @returns:  outtab (table)
+------------------------------------------------------------------------
+
+function CMDBuild:decode(xmltab)
+  local outtab={}
+  outtab["Id"]={}
+  if not xmltab then return end
+  for i=1,#xmltab
+  do
+    id=xmltab[i]:find("ns2:id")
+    if id ~= nil
+    then
+      id=id[1]
+      for j=1, #xmltab[i]
+      do
+        local attrList=xmltab[i][j]:find("ns2:attributeList")
+        if attrList ~= nil
+        then
+          local key=attrList:find("ns2:name")
+          local value=attrList:find("ns2:value") or ""
+          local code=attrList:find("ns2:code") or ""
+          if key ~= nil and not Utils.isin(ignoreFields,key[1])
+          then
+            key = key[1]
+            value = value[1]
+            code = code[1]
+
+            if outtab.Id[tostring(id)] == nil
+            then
+              outtab.Id[tostring(id)]={}
+            end
+            if code == nil
+            then
+              outtab.Id[tostring(id)][key]=value
+            else
+              outtab.Id[tostring(id)][key]={["value"]=value,["code"]=code}
+            end
+          end
+        end
+      end
+      if onCardLoad ~= nil
+      then
+        onCardLoad(outtab,tostring(id))
+      end
+    end
+  end
+  return outtab
+end
+
+function CMDBuild:set_credentials (credentials)
+  if not self.username then
+    if credentials.username then
+      Log.debug('Added user name', self.verbose)
+      self.username = credentials.username
+    else
+      Log.warn('`credentials.username\' can\'t be empty')
+    end
   end
 
-  return setmetatable(
-    {
-      url = credentials.url or 
-      'http://'..(credentials.ip or credentials[3])..'/cmdbuild/services/soap/Webservices',
-      Header = {
+  if not self.password then
+    if credentials.password then
+      Log.debug('Added a password for the user', self.verbose)
+      self.password = credentials.password
+    else
+      Log.warn('`credentials.password\' can\'t be empty')
+    end
+  end
+  
+  if not self.url then
+    if credentials.url then
+      Log.debug('Added url CMDBuild', self.verbose)
+      self.url = credentials.url
+    elseif credentials.ip then
+      Log.debug('CMDBuild address is formed and added', self.verbose)
+      self.url = webservices:gsub('__ip__', credentials.ip)
+    else
+      Log.warn('`credentials.ip\' can\'t be empty')
+    end
+  end
+
+  self.Header.insertHeader = function()
+    local oasisopen = 'http://docs.oasis-open.org/wss/2004/01/'
+    local wsse = oasisopen.."oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    local wssu = oasisopen.."oasis-200401-wss-wssecurity-utility-1.0.xsd"
+    local PassText = oasisopen.."oasis-200401-wss-username-token-profile-1.0#PasswordText"
+
+    if self.username and self.password then 
+      Log.info('The SOAP header is formed and added', self.verbose)
+      self.Header = {
         tag = "wsse:Security",
         attr = { ["xmlns:wsse"] = wsse },
         {
-          tag = "wsse:UsernameToken",
-          attr = { ["xmlns:wssu"] = wssu },
-          { tag = "wsse:Username", credentials.username or credentials[1] },
-          { tag = "wsse:Password", 
-            attr = { 
-              Type = PassText
-            },
-            credentials.password or credentials[2] 
-          }
+          tag = "wsse:UsernameToken", attr = { ["xmlns:wssu"] = wssu },
+          { tag = "wsse:Username", self.username },
+          { tag = "wsse:Password", attr = { Type = PassText }, self.password }
         }
-      },
-      verbose = verbose or true,
-      _debug = _debug or false
-    }, mt  
-  )
-end
+      }
+    else
+      Log.warn('Failed to generate the SOAP header', self.verbose)
+      return nil
+    end
+  end
+  
+  return self.Header
+end  -----  end of function CMDBuild_mt:set_credentials  -----
 
 ------------------------------------------------------------------------
 -- @name:  CMDBuild:createLookup
@@ -215,16 +309,12 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:createLookup(lookup_type, code, description, id, notes, parent_id, position)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:createLookup",
-    header = self.Header, 
-    entries = {
-      { tag = "soap1:lookup",	
-        { tag = "soap1:code", code },
-        { tag = "soap1:description", description }
-      }
+  local request = {}
+  request.method = "createLookup"
+  request.entries = {
+    { tag = "soap1:lookup",	
+      { tag = "soap1:code", code },
+      { tag = "soap1:description", description }
     }
   }
   
@@ -258,15 +348,11 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteLookup(lookup_id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:deleteLookup",
-    header = self.Header, 
-    entries = {
-      { tag = "soap1:lookup",	
-        { tag = "soap1:lookupId", lookup_id },
-      }
+  local request = {}
+  request.method = "deleteLookup"
+  request.entries = {
+    { tag = "soap1:lookup",	
+      { tag = "soap1:lookupId", lookup_id },
     }
   }
 
@@ -290,16 +376,12 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:updateLookup(lookup_type, code, description, id, notes, parent_id, position)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:updateLookup",
-    header = self.Header, 
-    entries = {
-      { tag = "soap1:lookup",	
-        { tag = "soap1:code", code },
-        { tag = "soap1:description", description }
-      }
+  local request = {}
+  request.method = "updateLookup"
+  request.entries = {
+    { tag = "soap1:lookup",	
+      { tag = "soap1:code", code },
+      { tag = "soap1:description", description }
     }
   }
 
@@ -335,14 +417,10 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getLookupList(lookup_type, value, need_parent_list)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getLookupList",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:type", lookup_type },
-    }
+  local request = {}
+  request.method = "getLookupList"
+  request.entries = {
+    { tag = "soap1:type", lookup_type },
   }
 
   if value then 
@@ -366,14 +444,10 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getLookupById(lookup_id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getLookupById",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:id", lookup_id },
-    }
+  local request = {}
+  request.method = "getLookupById"
+  request.entries = {
+    { tag = "soap1:id", lookup_id },
   }
   
   local resp = self:call(request)
@@ -389,17 +463,13 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getLookupTranslationById(lookup_id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:callFunction",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:functionName", "dbic_get_lookup_trans_by_id" },
-      { tag = "soap1:params",
-        { tag = "soap1:name", "itid" },
-        { tag = "soap1:value", lookup_id}
-      }
+  local request = {}
+  request.method = "callFunction"
+  request.entries = {
+    { tag = "soap1:functionName", "dbic_get_lookup_trans_by_id" },
+    { tag = "soap1:params",
+      { tag = "soap1:name", "itid" },
+      { tag = "soap1:value", lookup_id}
     }
   }
   
@@ -424,21 +494,17 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:createRelation(domain_name, class1name, card1Id, class2name, card2Id, status, begin_date, end_date)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:createRelation",
-    header = self.Header, 
-    entries = {
-      { tag = "soap1:domainName", domain_name },
-      { tag = "soap1:class1Name", class1name },
-      { tag = "soap1:card1Id", card1Id },
-      { tag = "soap1:class2Name", class2name },
-      { tag = "soap1:card2Id", card2Id },
-      { tag = "soap1:status", status },
-      { tag = "soap1:beginDate", beginDate },
-      { tag = "soap1:endDate", endDate },
-    }
+  local request = {}
+  request.method = "createRelation"
+  request.entries = {
+    { tag = "soap1:domainName", domain_name },
+    { tag = "soap1:class1Name", class1name },
+    { tag = "soap1:card1Id", card1Id },
+    { tag = "soap1:class2Name", class2name },
+    { tag = "soap1:card2Id", card2Id },
+    { tag = "soap1:status", status },
+    { tag = "soap1:beginDate", beginDate },
+    { tag = "soap1:endDate", endDate },
   }
 
   local resp = self:call(request)
@@ -462,21 +528,17 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteRelation(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:deleteRelation",
-    header = header, 
-    entries = {
-      { tag = "soap1:domainName", domain_name },
-      { tag = "soap1:class1name", class1name },
-      { tag = "soap1:card1id", card1id },
-      { tag = "soap1:class2name", class2name },
-      { tag = "soap1:card2id", card2id },
-      { tag = "soap1:status", status },
-      { tag = "soap1:begindate", begindate },
-      { tag = "soap1:enddate", enddate },
-    }
+  local request = {}
+  request.method = "deleteRelation"
+  request.entries = {
+    { tag = "soap1:domainName", domain_name },
+    { tag = "soap1:class1name", class1name },
+    { tag = "soap1:card1id", card1id },
+    { tag = "soap1:class2name", class2name },
+    { tag = "soap1:card2id", card2id },
+    { tag = "soap1:status", status },
+    { tag = "soap1:begindate", begindate },
+    { tag = "soap1:enddate", enddate },
   }
 
   local resp = self:call(request)
@@ -494,16 +556,12 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getRelationList(domain_name, classname, id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getRelationList",
-    header = header, 
-    entries = {
-      { tag = "soap1:domain", domain_name },
-      { tag = "soap1:className", classname },
-      { tag = "soap1:cardId", id },
-    }
+  local request = {}
+  request.method = "getRelationList"
+  request.entries = {
+    { tag = "soap1:domain", domain_name },
+    { tag = "soap1:className", classname },
+    { tag = "soap1:cardId", id },
   }
 
   local resp = self:call(request)
@@ -527,21 +585,17 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getRelationHistory(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getRelationHistory",
-    header = header, 
-    entries = {
-      { tag = "soap1:domainName", domain_name },
-      { tag = "soap1:class1name", class1name },
-      { tag = "soap1:card1id", card1id },
-      { tag = "soap1:class2name", class2name },
-      { tag = "soap1:card2id", card2id },
-      { tag = "soap1:status", status },
-      { tag = "soap1:begindate", begindate },
-      { tag = "soap1:enddate", enddate },
-    }
+  local request = {}
+  request.method = "getRelationHistory"
+  request.entries = {
+    { tag = "soap1:domainName", domain_name },
+    { tag = "soap1:class1name", class1name },
+    { tag = "soap1:card1id", card1id },
+    { tag = "soap1:class2name", class2name },
+    { tag = "soap1:card2id", card2id },
+    { tag = "soap1:status", status },
+    { tag = "soap1:begindate", begindate },
+    { tag = "soap1:enddate", enddate },
   }
 
   local resp = self:call(request)
@@ -565,16 +619,12 @@ end
 function CMDBuild:startWorkflow(classname, attributes_list, metadata, complete_task)
   local attributes = {}
 
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:startWorkflow",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:card",	
-        { tag = "soap1:className", classname },
-        { tag = "soap1:id", card_id }
-      }
+  local request = {}
+  request.method = "startWorkflow"
+  request.entries = {
+    { tag = "soap1:card",	
+      { tag = "soap1:className", classname },
+      { tag = "soap1:id", card_id }
     }
   }
 
@@ -623,15 +673,11 @@ end
 function CMDBuild:updateWorkflow(process_id, attributes_list, complete_task)
   local attributes = {}
 
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:startWorkflow",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:card",	
-        { tag = "soap1:processId", process_id }
-      }
+  local request = {}
+  request.method = "startWorkflow"
+  request.entries = {
+    { tag = "soap1:card",	
+      { tag = "soap1:processId", process_id }
     }
   }
 
@@ -670,18 +716,14 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:uploadAttachment(classname, card_id, file, filename, category, description)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:uploadAttachment",
-    header = header, 
-    entries = {
-      { tag = "soap1:className", classname },
-      { tag = "soap1:cardId", card_id },
-      { tag = "soap1:fileName", filename },
-      { tag = "soap1:category", category },
-      { tag = "soap1:description", description },
-    }
+  local request = {}
+  request.method = "uploadAttachment"
+  request.entries = {
+    { tag = "soap1:className", classname },
+    { tag = "soap1:cardId", card_id },
+    { tag = "soap1:fileName", filename },
+    { tag = "soap1:category", category },
+    { tag = "soap1:description", description },
   }
 
   if file then
@@ -706,16 +748,12 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:downloadAttachment(classname, card_id, filename)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:downloadAttachment",
-    header = header, 
-    entries = {
-      { tag = "soap1:className", classname },
-      { tag = "soap1:cardId", card_id },
-      { tag = "soap1:fileName", filename },
-    }
+  local request = {}
+  request.method = "downloadAttachment"
+  request.entries = {
+    { tag = "soap1:className", classname },
+    { tag = "soap1:cardId", card_id },
+    { tag = "soap1:fileName", filename },
   }
 
   local resp = self:call(request)
@@ -734,16 +772,12 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteAttachment(classname, card_id, filename)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:deleteAttachment",
-    header = header, 
-    entries = {
-      { tag = "soap1:className", classname },
-      { tag = "soap1:cardId", card_id },
-      { tag = "soap1:fileName", filename },
-    }
+  local request = {}
+  request.method = "deleteAttachment"
+  request.entries = {
+    { tag = "soap1:className", classname },
+    { tag = "soap1:cardId", card_id },
+    { tag = "soap1:fileName", filename },
   }
 
   local resp = self:call(request)
@@ -763,17 +797,13 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:updateAttachment(classname, card_id, filename, description)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:updateAttachment",
-    header = header, 
-    entries = {
-      { tag = "soap1:className", classname },
-      { tag = "soap1:cardId", card_id },
-      { tag = "soap1:fileName", filename },
-      { tag = "soap1:description", description },
-    }
+  local request = {}
+  request.method = "updateAttachment"
+  request.entries = {
+    { tag = "soap1:className", classname },
+    { tag = "soap1:cardId", card_id },
+    { tag = "soap1:fileName", filename },
+    { tag = "soap1:description", description },
   }
 
   local resp = self:call(request)
@@ -797,14 +827,10 @@ end
 function CMDBuild:createCard(classname, attributes_list, metadata)
   local attributes = {}
 
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:createCard",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:cardType" }
-    }
+  local request = {}
+  request.method = "createCard"
+  request.entries = {
+    { tag = "soap1:cardType" }
   }
 
   table.insert(request.entries[1], { tag = "soap1:className", classname })
@@ -849,16 +875,12 @@ end
 function CMDBuild:updateCard(classname, card_id, attributes_list, metadata)
   local attributes = {}
 
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:updateCard",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:card",
-        { tag = "soap1:className", classname },
-        { tag = "soap1:id", card_id }
-      }
+  local request = {}
+  request.method = "updateCard"
+  request.entries = {
+    { tag = "soap1:card",
+      { tag = "soap1:className", classname },
+      { tag = "soap1:id", card_id }
     }
   }
 
@@ -896,15 +918,11 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:deleteCard(classname, card_id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:deleteCard",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:className", classname },
-      { tag = "soap1:cardId", card_id }
-    }
+  local request = {}
+  request.method = "deleteCard"
+  request.entries = {
+    { tag = "soap1:className", classname },
+    { tag = "soap1:cardId", card_id }
   }
   
   local resp = self:call(request)
@@ -925,13 +943,9 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getCard(classname, card_id, attributes_list)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getCard",
-    header = self.Header,
-    entries = { }
-  }
+  local request = {}
+  request.method = "getCard"
+  request.entries = {}
 
   if classname then
     table.insert(request.entries, { tag = "soap1:className", classname })
@@ -962,15 +976,11 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getCardHistory(classname, card_id)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getCardHistory",
-    header = self.Header,
-    entries = { 
-      { tag = "soap1:className", classname },
-      { tag = "soap1:cardId", card_id }
-    }
+  local request = {}
+  request.method = "getCardHistory"
+  request.entries = { 
+    { tag = "soap1:className", classname },
+    { tag = "soap1:cardId", card_id }
   }
   
   local resp = self:call(request)
@@ -1000,16 +1010,16 @@ end
 ------------------------------------------------------------------------
 
 function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
+  Log.debug(
+    string.format('Created a request to get cards for the class: Hosts: %s', classname), 
+    self._debug
+  )
   local attributes, _limit = {}, {}
-  Log.debug(string.format('Создаем запрос получения карт для класса: %s', classname), self._debug)
-  local request = {
-    url = self.url,
-    soapaction = '',
-    method = "soap1:getCardList",
-    header = self.Header,
-    entries = {
-      { tag = "soap1:className", classname },
-    }
+
+  local request = {}
+  request.method = "getCardList"
+  request.entries = {
+    { tag = "soap1:className", classname },
   }
 
   if attributes_list then
@@ -1020,7 +1030,7 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
     end
     table.insert(request.entries, attributes_list)
     Log.debug(
-      string.format('В запрос получения карт для класса: %s, добавлен список аттрибутов: %s', 
+      string.format('In a request gets cards for the class: \'%s\', added list of attributes: : \'%s\'', 
         classname, 
         tostring(unpack(attributes_list))
       ), 
@@ -1040,7 +1050,7 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
       }
       table.insert(request.entries, filters)
       Log.debug(
-        string.format('В запрос получения карт для класса: %s, добавлен фильтр: {name=\'%s\', operator=\'%s\', value=\'%s\'}', 
+        string.format('In a request gets cards for the class: \'%s\', added filter: {name=\'%s\', operator=\'%s\', value=\'%s\'}', 
           classname, 
           filter.name, 
           filter.operator, 
@@ -1075,7 +1085,7 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
       end
       table.insert(request.entries, filters)
       log.debug(
-        string.format('в запрос получения карт для класса: %s, добавлен множественный фильтр', 
+        string.format('The request gets cards for the class: \'%s\', added multiple filter', 
           classname
         ), 
         self._debug
@@ -1093,7 +1103,7 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
   if limit then
     table.insert(request.entries, { tag = "soap:limit", limit })
     log.debug(
-      string.format('в запрос получения карт для класса: %s, добавлен лимит на выгружемое кол-во карт: %d', 
+      string.format('The request gets cards for the class: \'%s\', added limit: \'%d\'', 
         classname,
         limit
       ), 
@@ -1122,26 +1132,46 @@ function CMDBuild:getCardList(classname, attributes_list, filter, filter_sq_oper
     table.insert(request.entries, _cql_query)
   end
 
-  Log.info(
-    string.format('Попытка получить карты для класса: %s', classname),
-    self.verbose
-  )
-  
   local resp = self:call(request)
-  if not resp then
+  local eval_resp = XML.eval(resp):find'ns2:return'
+  local decode_resp = self:decode(eval_resp)
+  if not decode_resp.Id then
     Log.warn(
-      string.format("Не удалось получить карты для класса: %s", classname), 
+      string.format("Failed to get cards for the class: \'%s\'", classname), 
       self.verbose
     )
     return
   else
     Log.info(
-      string.format('Карты для класса: %s успешно выгружены', classname),
+      string.format('Received cards for the class: \'%s\' in quantity: \'%d\'', classname, Utils.tsize(decode_resp)),
       self.verbose
     )
   end
 
-  return XML.eval(resp):find'ns2:return'
+  return eval_resp
+end
+
+------------------------------------------------------------------------
+-- @name: CMDBuild:__call
+-- @purpose: 
+-- @description: {+DESCRIPTION+}
+-- @params: method_name - getCardList or maybe other methods (string)
+-- @params: params - lua table (table)
+--          { tag = "soap1:className", 'Hosts' },
+-- @usage: CMDBuidl:__call('getCardList', { tag = 'soap1:classname', 'Hosts' })
+-- @returns: soap response (string)
+------------------------------------------------------------------------
+
+function CMDBuild:__call(method_name, params)
+  local request = {}
+  request.method = method_name
+  request.entries = {
+    params
+  }
+
+  local resp = self:call(request)
+  local eval_resp = XML.eval(resp):find'ns2:return'
+  return eval_resp
 end
 
 ---------------------------------------------------------------------
@@ -1149,7 +1179,6 @@ end
 -- @description: Call a remote method.
 -- @params: args Table with the arguments which could be:
 --          url: String with the location of the server.
---          soapaction: String with the value of the SOAPAction header.
 --          namespace: String with the namespace of the elements.
 --          method: String with the method's name.
 --          entries: Table of SOAP elements (LuaExpat's format).
@@ -1198,11 +1227,12 @@ function CMDBuild:call(args)
       {
         tag = "soap:Body",
         [1] = {
-          tag = nil, -- must be filled
+          tag = "", -- must be filled
           attr = {}, -- must be filled
         },
       }
     }
+
     ------------------------------------------------------------------------
     -- @name:  contents
     -- @purpose:  
@@ -1339,10 +1369,13 @@ function CMDBuild:call(args)
     if args.internal_namespace then
       xmlns = xmlns..":"..args.internal_namespace
       args.method = args.internal_namespace..":"..args.method
+    else
+      xmlns = xmlns..":soap1"
+      args.method = "soap1:"..args.method
     end
 
     -- Cleans old header and insert a new one (if it exists).
-    insert_header (envelope_templ, args.header)
+    insert_header (envelope_templ, args.header or self.Header)
 
     -- Sets new body contents (and erase old content).
     local body = (envelope_templ[2] and envelope_templ[2][1]) or envelope_templ[1][1]
@@ -1359,15 +1392,9 @@ function CMDBuild:call(args)
 
 	local soap_action, content_type_header
 	if (not args.soapversion) or tonumber(args.soapversion) == 1.1 then
-		soap_action = '"'..assert(args.soapaction, mandatory_soapaction)..'"'
 		content_type_header = "text/xml;charset=UTF-8"
-	elseif tonumber(args.soapversion) == 1.2 then
-		soap_action = nil
+  else
 		content_type_header = "application/soap+xml"
-	else
-		assert(
-      false, invalid_args..tostring(args.soapversion)..", "..tostring(args.soapaction)
-    )
 	end
 
 	local xml_header = xml_header_template
@@ -1392,7 +1419,7 @@ function CMDBuild:call(args)
 	end
 
 	local url = {
-		url = assert(args.url, mandatory_url),
+		url = assert(args.url or self.url, mandatory_url),
 		method = "POST",
 		source = ltn12.source.string(request_body),
 		sink = request_sink,
@@ -1444,59 +1471,6 @@ function CMDBuild:call(args)
   return response
 end
 
-------------------------------------------------------------------------
--- @name:  CMDBuild:decode
--- @purpose:  
--- @description:  Convert SOAP response to Lua Table
--- @params:  xmltab - SOAP response (string)
--- @returns:  outtab (table)
-------------------------------------------------------------------------
-
-function CMDBuild:decode(xmltab)
-  local outtab={}
-  outtab["Id"]={}
-  if not xmltab then return end
-  for i=1,#xmltab
-  do
-    id=xmltab[i]:find("ns2:id")
-    if id ~= nil
-    then
-      id=id[1]
-      for j=1, #xmltab[i]
-      do
-        local attrList=xmltab[i][j]:find("ns2:attributeList")
-        if attrList ~= nil
-        then
-          local key=attrList:find("ns2:name")
-          local value=attrList:find("ns2:value") or ""
-          local code=attrList:find("ns2:code") or ""
-          if key ~= nil and not Utils.isin(ignoreFields,key[1])
-          then
-            key = key[1]
-            value = value[1]
-            code = code[1]
-
-            if outtab.Id[tostring(id)] == nil
-            then
-              outtab.Id[tostring(id)]={}
-            end
-            if code == nil
-            then
-              outtab.Id[tostring(id)][key]=value
-            else
-              outtab.Id[tostring(id)][key]={["value"]=value,["code"]=code}
-            end
-          end
-        end
-      end
-      if onCardLoad ~= nil
-      then
-        onCardLoad(outtab,tostring(id))
-      end
-    end
-  end
-  return outtab
-end
 
 ------------------------------------------------------------------------
 -- @name:  dump
@@ -1598,10 +1572,9 @@ local function main()
   local args = parser:parse()
   if args.list then dump("CMDBuild", CMDBuild) end
   if args.username and args.password and args.ip then
-    local cmdbuild = CMDBuild:new(
-      { args.username, args.password, args.ip }, nil, nil, args.verbose, args.debug
-    )
-    
+    local cmdbuild = CMDBuild:new(nil, nil, args.verbose, args.debug)
+    cmdbuild:set_credentials({ username = args.username, password = args.password, ip = args.ip }).insertHeader() 
+
     if args.getCardList then
       local filter, resp = nil, nil
       if args.filter then
@@ -1621,7 +1594,8 @@ local function main()
 
         local function kazniie_model(name, filtername, filter)
           local Hosts = {}
-          Hosts = cmdbuild:decode(cmdbuild:getCardList(name, nil, filter))
+          Hosts = cmdbuild:__call('getCardList', { tag = 'soap1:classname', 'Hosts' })
+          --Hosts = cmdbuild:decode(cmdbuild:getCardList(name, nil, filter))
           for k, v in pairs(Hosts.Id) do
             Hosts.Id[k]["Items"] = cmdbuild:decode(cmdbuild:getCardList("zItems", nil, {name=filtername,operator='EQUALS',value=k}))
             Hosts.Id[k]["Triggers"] = cmdbuild:decode(cmdbuild:getCardList("ztriggers", nil, {name=filtername,operator='EQUALS',value=k}))
@@ -1647,7 +1621,9 @@ local function main()
         Log.warn('Вывод возможен лишь в JSON формате', args.debug)
         print(Utils.pretty(cjson.decode(resp)))
       elseif args.format == 'json' and args.dependencies then
-        print(Utils.pretty(cjson.decode(resp)))
+        if args.getCardList == 'Templates' or args.getCardList == 'Hosts' then
+          print(Utils.pretty(cjson.decode(resp)))
+        end
       else
         print(Utils.pretty(cmdbuild:decode(resp)))
       end
