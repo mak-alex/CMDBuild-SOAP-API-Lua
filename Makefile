@@ -1,5 +1,4 @@
 FILENAME=src/main.lua
-EXPARGS=--export --verbose
 LUALIB=/usr/include/lua5.1
 LUARLIB=~/.luarocks/lib/lua/5.1/ 
 LUAH=/usr/lib/x86_64-linux-gnu/liblua5.1.a #/usr/lib/liblua.a
