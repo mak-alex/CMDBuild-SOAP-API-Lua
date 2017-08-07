@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b5f30bde-c217-48fb-bba9-c456e900e383" name="Default" comment="фсе, не могу больше в vim работать, ушел в Idea, причесал код, исправил мелкие но множественные ошибки при формировани запросов и т.д.">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/cmdbuild.iml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/cmdbuild/attachment.lua" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/cmdbuild/card.lua" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/cmdbuild/lookup.lua" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/cmdbuild/relation.lua" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/cmdbuild/workflow.lua" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/main.lua.c" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bin/cmdbuild" afterPath="$PROJECT_DIR$/bin/cmdbuild" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/Log.lua" afterPath="$PROJECT_DIR$/lib/Log.lua" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/Utils.lua" afterPath="$PROJECT_DIR$/lib/Utils.lua" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/base64.lua" afterPath="$PROJECT_DIR$/lib/base64.lua" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/cmdbuild.lua" afterPath="$PROJECT_DIR$/lib/cmdbuild.lua" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main.lua" afterPath="$PROJECT_DIR$/main.lua" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/cmdbuild.lua" afterPath="$PROJECT_DIR$/tests/cmdbuild.lua" />
-    </list>
+    <list default="true" id="b5f30bde-c217-48fb-bba9-c456e900e383" name="Default" comment="фсе, не могу больше в vim работать, ушел в Idea, причесал код, исправил мелкие но множественные ошибки при формировани запросов и т.д." />
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
