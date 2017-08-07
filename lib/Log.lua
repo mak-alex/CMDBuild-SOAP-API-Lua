@@ -112,7 +112,7 @@ do
         end
 
         local msg = tostring(message)
-        local info = debug.getinfo(2, "Sl")
+        --local info = debug.getinfo(2, "Sl")
         --local lineinfo = info.short_src .. ":" .. info.currentline
         if x.name == 'error' then
             error(string.format("%s%-6s%s [%s] %s: %s",

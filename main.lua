@@ -55,15 +55,20 @@ local function main()
 
     -- Создаем новый инстанс
     local cmdbuild = CMDBuild:new(nil, nil, args.verbose, args.debug)
+
     -- Добавляем пользователя и создаем SOAP заголовок
     cmdbuild:set_credentials({ username = username, password = password, ip = ip }).insertHeader()
 
+    -- если указан класс
     if args.getCardList then
         local filter, resp
+
+        -- если указаны аргументы фильтра, формируем
         if args.filter then
             filter = { name = args.filter[1], operator = args.filter[2], value = args.filter[3] }
         end
 
+        -- если указан идентификатор карты для класса
         if args.card_id then
             resp = cmdbuild:getCard(args.getCardList, args.card_id)
         else
@@ -74,40 +79,57 @@ local function main()
             -- @params : name - classname (string)
             -- @returns : table
             ------------------------------------------------------------------------
-            function kazniie_model(name, filtername, filter)
+            local kazniie_model = function(name, filter)
+                local _filter = { name = 'hostid', operator = 'EQUALS', value = nil }
                 local Hosts = cmdbuild.Utils.decode(cmdbuild:getCardList(name, nil, filter))
-                for k, v in pairs(Hosts.Id) do
-                    Hosts.Id[k]["Items"] = cmdbuild.Utils.decode(cmdbuild:getCardList("zItems", nil, { name = filtername, operator = 'EQUALS', value = k }))
-                    Hosts.Id[k]["Triggers"] = cmdbuild.Utils.decode(cmdbuild:getCardList("ztriggers", nil, { name = filtername, operator = 'EQUALS', value = k }))
-                    Hosts.Id[k]["Applications"] = cmdbuild.Utils.decode(cmdbuild:getCardList("zapplications", nil, { name = filtername, operator = 'EQUALS', value = k }))
+                -- добываем зависимости для класса Hosts or templates
+                -- и кладем их в родительский класс, после отдаем в виде JSON
+                for host_id, _ in pairs(Hosts.Id) do
+                    if host_id then
+                        _filter.value = host_id
+                        Hosts.Id[host_id]["Items"] = cmdbuild.Utils.decode( cmdbuild:getCardList("zItems", nil, _filter) )
+                        Hosts.Id[host_id]["Triggers"] = cmdbuild.Utils.decode( cmdbuild:getCardList("ztriggers", nil, _filter) )
+                        Hosts.Id[host_id]["Applications"] = cmdbuild.Utils.decode( cmdbuild:getCardList("zapplications", nil, _filter) )
+                    end
                 end
                 return cjson.encode(Hosts)
             end
 
-            if args.getCardList == 'Templates' then args.getCardList = 'templates' end
+            -- если на входе указали не правильно класс
+            if args.getCardList == 'Templates' then
+                args.getCardList = 'templates'
+            end
 
+            -- если просят зависимости для класса Hosts
             if args.dependencies and args.getCardList == 'Hosts' then
-                resp = kazniie_model("Hosts", 'hostid', filter)
+                resp = kazniie_model("Hosts", filter)
+            -- или просят зависимости для класса templates
             elseif args.dependencies and args.getCardList == 'templates' then
-                resp = kazniie_model("templates", 'hostid', filter)
+                resp = kazniie_model("templates", filter)
+            -- в противном случае выгружаем указанный класс без зависимостей
             else
                 resp = cmdbuild:getCardList(args.getCardList, nil, filter)
             end
         end
 
+        -- если указан формат xml и не указаны зависимости
         if args.format == 'xml' and not args.dependencies then
             print(resp)
+        -- или указан формат xml но с зависимостями
         elseif args.format == 'xml' and args.dependencies then
             print('XML is not supported, the output is produced in JSON format')
             print(cmdbuild.Utils.pretty(cjson.decode(resp)))
+        -- а может указан формат json и зависимости
         elseif args.format == 'json' and args.dependencies then
             if args.getCardList == 'Templates' or args.getCardList == 'Hosts' then
                 print(cmdbuild.Utils.pretty(cjson.decode(resp)))
             end
+        -- в противном случае отдаем в виде JSON
         else
             print(cmdbuild.Utils.pretty(cmdbuild.Utils.decode(resp)))
         end
     end
 end
 
+-- типа старт, че
 main()

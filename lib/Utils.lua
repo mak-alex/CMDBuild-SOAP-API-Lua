@@ -75,22 +75,20 @@ local tunescape = {
 }
 
 ------------------------------------------------------------------------
--- @name : escape
--- @purpose :
--- @description : Escape special characters
--- @params : text - string to modify (string)
--- @returns : Modified string
+--  escape
+--  Escape special characters
+-- @param text - string to modify (string)
+-- @return Modified string
 ------------------------------------------------------------------------
 function Utils.escape(text)
     return (string.gsub(text, "([&<>'\"])", tescape))
 end
 
 ------------------------------------------------------------------------
--- @name : unescape
--- @purpose :
--- @description : Unescape special characters
--- @params : text - string to modify (string)
--- @returns : Modified string
+--  unescape
+--  Unescape special characters
+-- @param text - string to modify (string)
+-- @return Modified string
 ------------------------------------------------------------------------
 function Utils.unescape(text)
     return (string.gsub(text, "(&%a+%;)", tunescape))
@@ -121,11 +119,10 @@ function Utils.tsize(T)
 end
 
 ------------------------------------------------------------------------
--- @name : CMDBuild:decode
--- @purpose :
--- @description : Convert SOAP response to Lua Table
--- @params : xmltab - SOAP response (string)
--- @returns : outtab (table)
+--  CMDBuild:decode
+--  Convert SOAP response to Lua Table
+-- @param xmltab - SOAP response (string)
+-- @return outtab (table)
 ------------------------------------------------------------------------
 function Utils.decode(xmltab)
     local outtab = {}
@@ -133,7 +130,7 @@ function Utils.decode(xmltab)
     if not xmltab then return end
     for i = 1, #xmltab
     do
-        id = xmltab[i]:find("ns2:id")
+        local id = xmltab[i]:find("ns2:id")
         if id ~= nil then
             id = id[1]
             for j = 1, #xmltab[i]
@@ -168,15 +165,14 @@ function Utils.decode(xmltab)
 end
 
 ------------------------------------------------------------------------
--- @name : Utils.pretty
--- @purpose :
--- @description : Format pretty JSON string
--- @params : dt - jsonstring (string)
--- @params : lf - {+DESCRIPTION+} ({+TYPE+})
--- @params : id - {+DESCRIPTION+} ({+TYPE+})
--- @params : ac - {+DESCRIPTION+} ({+TYPE+})
--- @params : ec - {+DESCRIPTION+} ({+TYPE+})
--- @returns : pretty (string)
+--  Utils.pretty
+--  Format pretty JSON string
+-- @param dt - jsonstring (string)
+-- @param lf - {+DESCRIPTION+} ({+TYPE+})
+-- @param id - {+DESCRIPTION+} ({+TYPE+})
+-- @param ac - {+DESCRIPTION+} ({+TYPE+})
+-- @param ec - {+DESCRIPTION+} ({+TYPE+})
+-- @return pretty (string)
 ------------------------------------------------------------------------
 function Utils.pretty(dt, lf, id, ac, ec)
     local s, e = (ec or cjson.encode)(dt)
