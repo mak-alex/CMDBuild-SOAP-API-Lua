@@ -5,23 +5,17 @@
 	luasocket 3.0rc1-2 - luarocks install luasocket --local
 	luaxml 101012-2 - luarocks install luaxml --local
 	bit32 - luarocks install bit32 --local
-	lib/base64.lua
+	lib/*.lua
   	argparse - luarocks install argparse --local
 
 ##Example
 ```
 	-- include cmdbuild module
-	local cmdbuild=require'src.cmdbuild'
-	 -- create new instance
-	cmdbuild:new{
+	local cmdbuild=require'src.cmdbuild':new{
 		username='admin, 
-		password='3$rFvCdE', 
-		ip='10.244.244.128'
+		password='password', 
+		ip='localhost' -- or maybe url = 'http://localhost/services/soap/Webservices'
 	}
-	-- get cards and print table
-	table.foreach(
-		cmdbuild:get_card_list("Hosts").Id, 
-		print
-	)
+	local response = CMDBuild.Card:get().menu_schema()
+	print(utils.pretty(response))
 ```
-	lua src/cmdbuild.lua -h
