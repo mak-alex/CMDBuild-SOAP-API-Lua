@@ -38,30 +38,66 @@ local errors = {
 local CMDBuild = {
     type = 'CMDBuild',
     webservices = 'http://__ip__/cmdbuild/services/soap/Webservices',
-    ltn12 = require'ltn12',
-    client = { http = require'socket.http', },
+    ltn12 = require 'ltn12',
+    client = { http = require 'socket.http', },
     Log = require 'lib.Log',
     Utils = require 'lib.Utils',
-    Card = require'lib.cmdbuild.card',
-    Relation = require'lib.cmdbuild.relation',
-    Attachment = require'lib.cmdbuild.attachment',
-    Lookup = require'lib.cmdbuild.lookup',
-    Workflow = require'lib.cmdbuild.workflow',
+    Card = require 'lib.cmdbuild.card',
+    Relation = require 'lib.cmdbuild.relation',
+    Attachment = require 'lib.cmdbuild.attachment',
+    Lookup = require 'lib.cmdbuild.lookup',
+    Workflow = require 'lib.cmdbuild.workflow',
     Xml = require("lib.xmlSimple").newParser()
 }
 
 CMDBuild.__index = CMDBuild -- get indices from the table
 CMDBuild.__metatable = CMDBuild -- protect the metatable
 
-setmetatable(CMDBuild.Attachment, {__index = CMDBuild})
-setmetatable(CMDBuild.Card, {__index = CMDBuild})
-setmetatable(CMDBuild.Lookup, {__index = CMDBuild})
-setmetatable(CMDBuild.Relation, {__index = CMDBuild})
-setmetatable(CMDBuild.Workflow, {__index = CMDBuild})
+setmetatable(CMDBuild.Attachment, { __index = CMDBuild })
+setmetatable(CMDBuild.Card, { __index = CMDBuild })
+setmetatable(CMDBuild.Lookup, { __index = CMDBuild })
+setmetatable(CMDBuild.Relation, { __index = CMDBuild })
+setmetatable(CMDBuild.Workflow, { __index = CMDBuild })
+
+---------------------------------------------------------------------
+-- @param attr Table of object's attributes.
+-- @return String with the value of the namespace ("xmlns") field.
+---------------------------------------------------------------------
+local function find_xmlns(attr)
+    for a, v in pairs(attr) do
+        if string.find(a, "xmlns", 1, 1) then
+            return v
+        end
+    end
+end
+
+-- Iterates over the children of an object.
+-- It will ignore any text, so if you want all of the elements, use ipairs(obj).
+-- @param obj Table (LOM format) representing the XML object.
+-- @param tag String with the matching tag of the children
+--	or nil to match only structured children (single strings are skipped).
+-- @return Function to iterate over the children of the object
+--	which returns each matching child.
+
+local function list_children(obj, tag)
+    local i = 0
+    return function()
+        i = i + 1
+        local v = obj[i]
+        while v do
+            if type(v) == "table" and (not tag or v[v.TAG] == tag) then
+                return v
+            end
+            i = i + 1
+            v = obj[i]
+        end
+        return nil
+    end
+end
 
 ------------------------------------------------------------------------
---  CMDBuild:new
---  Create new instance
+-- CMDBuild:new
+-- Create new instance
 -- @param pid - pid string for log (string or number)
 -- @param logcolor - use color log print to stdout (boolean)
 -- @param verbose - verbose mode (boolean)
@@ -80,6 +116,7 @@ function CMDBuild:new(pid, logcolor, verbose, _debug)
 
     return CMDBuild
 end
+
 
 ------------------------------------------------------------------------
 -- CMDBuild:set_credentials
@@ -155,8 +192,8 @@ end
 ----- end of function CMDBuild:mt:set_credentials  -----
 
 ---------------------------------------------------------------------
---  CMDBuild.call
---  Call a remote method.
+-- CMDBuild.call
+-- Call a remote method.
 -- @table args Table with the arguments which could be
 -- @field url String with the location of the server
 -- @field namespace String with the namespace of the elements
@@ -203,8 +240,8 @@ function CMDBuild:call(args)
         }
 
         ------------------------------------------------------------------------
-        --  contents
-        --  Serialize the children of an object
+        -- contents
+        -- Serialize the children of an object
         -- @param obj - Table with the object to be serialized (table)
         -- @return String string.representation of the children
         ------------------------------------------------------------------------
@@ -221,15 +258,15 @@ function CMDBuild:call(args)
         end
 
         ------------------------------------------------------------------------
-        --  serialize
-        --  Serialize an object
+        -- serialize
+        -- Serialize an object
         -- @param obj - Table with the object to be serialized (table)
         -- @return String with string.representation of the object
         ------------------------------------------------------------------------
         serialize = function(obj)
             ------------------------------------------------------------------------
-            --  attrs
-            --  Serialize the table of attributes
+            -- attrs
+            -- Serialize the table of attributes
             -- @param a - Table with the attributes of an element (table)
             -- @return String string.representation of the object
             ------------------------------------------------------------------------
@@ -265,6 +302,7 @@ function CMDBuild:call(args)
                     return obj
                 elseif tt == "table" then
                     local t = obj.tag
+                    if not t then return end
                     assert(t, "Invalid table format (no `tag' field)")
                     return string.format("<%s%s>%s</%s>", t, attrs(obj.attr), contents(obj), t)
                 else
@@ -274,8 +312,8 @@ function CMDBuild:call(args)
         end
 
         ------------------------------------------------------------------------
-        --  insert_header
-        --  Add header element (if it exists) to object
+        -- insert_header
+        -- Add header element (if it exists) to object
         -- Cleans old header element anywat
         -- @tparam obj - Object for insert new header (table)
         -- @tparam header - template header (table)
@@ -362,28 +400,26 @@ function CMDBuild:call(args)
 
     local suggested_layers = { http = "socket.http", https = "ssl.https", }
     local protocol = url.url:match "^(%a+)" -- protocol's name
-    local mod = assert(
-        self.client[protocol], '"'
+    local mod = assert(self.client[protocol], '"'
             .. protocol
             .. '" protocol support unavailable. Try soap.CMDBuild.'
             .. protocol
             .. ' = require"'
             .. suggested_layers[protocol]
-            .. '" to enable it.'
-    )
+            .. '" to enable it.')
     local request = assert(mod.request, 'Could not find request function on module soap.CMDBuild.' .. protocol)
     request(url)
 
     ------------------------------------------------------------------------
-    --  retriveMessage
-    --  The function truncates the additional information in the SOAP response
+    -- retriveMessage
+    -- The function truncates the additional information in the SOAP response
     -- @param response - SOAP response (table)
     -- @return resp - (string)
     ------------------------------------------------------------------------
     local function retriveMessage(response)
         ------------------------------------------------------------------------
-        --  jtr
-        --  Create lua table from SOAP response table
+        -- jtr
+        -- Create lua table from SOAP response table
         -- @param text_array - SOAP (table)
         -- @return ret - (string)
         ------------------------------------------------------------------------
@@ -405,25 +441,187 @@ function CMDBuild:call(args)
     local error_handler = function(response)
         local _response = xml.eval(response)
 
-        if _response:find'soap:Fault' then
-            local fault = _response:find'soap:Fault':find'faultstring'[1]
+        if _response:find 'soap:Fault' then
+            local fault = _response:find 'soap:Fault':find 'faultstring'[1]
             if fault then
-                self.Log.error('SOAP Error: '..fault, self.verbose)
+                self.Log.error('SOAP Error: ' .. fault, self.verbose)
+                os.exit(-1)
             end
         end
-        if _response:find'ns2:return':find'ns2:totalRows' then
-            local totalRows = tonumber(_response:find'ns2:return':find'ns2:totalRows'[1])
-            if totalRows <= 0 then
-                self.Log.error('SOAP Error: totalRows is nil', self.verbose)
+        return _response
+    end
+
+    local response =  retriveMessage(tbody)
+    self.Log.debug('SOAP Response: ' .. tostring(xml.eval(response)), self._debug)
+    tbody.xml = function()
+        return error_handler(response)
+    end
+
+    ---------------------------------------------------------------------
+    -- Converts a SOAP message into Lua objects.
+    -- @param ignoreFields
+    -- @param onCardLoad
+    -- @return String with namespace, String with method's name and
+    -- Table with SOAP elements (LuaExpat's format).
+    ---------------------------------------------------------------------
+    tbody.decode = function(ignoreFields, onCardLoad)
+        local obj = assert(error_handler(response))
+        local ns = obj[obj.TAG]:match("^(.-):")
+        assert(obj[obj.TAG] == ns .. ":Envelope", "Not a SOAP Envelope: " .. tostring(obj[obj.TAG]))
+        local lc = list_children(obj)
+        local o = lc()
+        -- Skip SOAP:Header
+        while o and (o[o.TAG] == ns .. ":Header" or o.tag == "SOAP-ENV:Header") do
+            o = lc()
+        end
+        if o and (o[o.TAG] == ns .. ":Body" or o.tag == "SOAP-ENV:Body") then
+            obj = list_children(o)()
+        else
+            error("Couldn't find SOAP Body!")
+        end
+        local method = obj[obj.TAG]:match("%:([^:]*)$") or obj[obj.TAG]
+        local response = {
+            namespace = find_xmlns(obj),
+            method = method, --obj[obj.TAG]:match("%:([^:]*)$") or obj[obj.TAG],
+            entries = { Id = {} }
+        }
+
+        local ns = obj[obj.TAG]:match("^(.-):")
+        obj = list_children(obj, ns .. ':return')()
+        if not obj then return end
+        if method ~= 'createCardResponse' and method ~= 'updateCardResponse' and method ~= 'deleteCardResponse' and obj[2] and obj[2][1]:find(ns .. ':attributeList') then
+            for i = 1, #obj
+            do
+                local id = obj[i]:find(ns .. ":id")
+                if id ~= nil then
+                    id = id[1]
+                    if obj[i][1]:find(ns .. ':attributeList') then
+                        for j = 1, #obj[i]
+                        do
+                            local attrList = obj[i][j]:find(ns .. ":attributeList")
+                            if attrList ~= nil then
+                                local key = attrList:find(ns .. ":name")
+                                local value = attrList:find(ns .. ":value") or ""
+                                local code = attrList:find(ns .. ":code") or ""
+                                if key ~= nil and not self.Utils.isin(ignoreFields, key[1]) then
+                                    key = key[1]
+                                    value = value[1]
+                                    code = code[1]
+                                    if response.entries.Id[tostring(id)] == nil then
+                                        response.entries.Id[tostring(id)] = {}
+                                    end
+                                    if code == nil then
+                                        response.entries.Id[tostring(id)][key] = value
+                                    else
+                                        response.entries.Id[tostring(id)][key] = { value = value, code = code }
+                                    end
+                                end
+                            end
+                        end
+                        if onCardLoad ~= nil then
+                            onCardLoad(response.entries, tostring(id))
+                        end
+                    end
+                end
+            end
+        else
+            if method == 'getCardListResponse' or method == 'getCardResponse' then
+                local id
+                if not id then
+                    if obj[1]:find(ns..':id') then
+                        id= obj[1]:find(ns..':id')[1]
+                    elseif obj:find(ns..':id') then
+                        id = obj:find(ns..':id')[1]
+                    else
+                        id = 0
+                    end
+                end
+                if obj[1]:find(ns..':cards') then
+                    obj = obj[1]:find(ns..':cards')
+                end
+                for i = 1, #obj do
+                    if id then
+                        local attrList = obj[i]:find(ns .. ":attributeList")
+                        if attrList then
+                            local key = attrList:find(ns .. ":name")
+                            local value = attrList:find(ns .. ":value") or ""
+                            local code = attrList:find(ns .. ":code") or ""
+                            if key ~= nil and not self.Utils.isin(ignoreFields, key[1]) then
+                                key = key[1]
+                                value = value[1]
+                                code = code[1]
+                                if response.entries.Id[tostring(id)] == nil then
+                                    response.entries.Id[tostring(id)] = {}
+                                end
+                                if code == nil then
+                                    response.entries.Id[tostring(id)][key] = value
+                                else
+                                    response.entries.Id[tostring(id)][key] = { value = value, code = code }
+                                end
+                            end
+                        end
+                    end
+                end
+            elseif method == 'createCardResponse' or method == 'updateCardResponse' then
+                if response.entriesId == nil then
+                    response.entries.Id = {}
+                end
+                response.entries.Id['cardId'] = obj[1]
+            elseif method == 'deleteCardResponse' then
+                if response.entries.Id == nil then
+                    response.entries.Id = {}
+                end
+                response.entries.Id['status'] = obj[1]
+            else
+                for i=1, #obj do
+                    local key = obj[i][obj.TAG]
+                    local value = obj[i][1]
+                    if response.entries.Id == nil then
+                        response.entries.Id = {}
+                    end
+                    response.entries.Id[key] = value
+                end
             end
         end
+
+        ------------------------------------------------------------------------
+        -- response.tprint
+        -- Recursively print arbitrary data
+        -- @param l - Set limit (default 100000) to stanch infinite loops (number)
+        -- @param i - Indents tables as [KEY] VALUE, nested tables as [KEY] [KEY]...[KEY] VALUE (string)
+        -- Set indent ("") to prefix each line:    Mytable [KEY] [KEY]...[KEY] VALUE
+        -- @return
+        ------------------------------------------------------------------------
+        response.tprint = function(l, i) -- recursive Print (structure, limit, indent)
+            local function rPrint(s, l, i)
+                l = (l) or 100000;
+                i = i or ""; -- default item limit, indent string
+                if (l < 1) then
+                    print "ERROR: Item limit reached.";
+                    return l - 1
+                end;
+                local ts = type(s);
+                if (ts ~= "table") then
+                    print(i, ts, s);
+                    return l - 1
+                end
+                print(i, ts); -- print "table"
+                for k, v in pairs(s) do -- print "[KEY] VALUE"
+                    if k ~= 'tprint' then
+                        l = rPrint(v, l, i .. "\t[" .. tostring(k) .. "]");
+                    end
+                    if (l < 0) then break end
+                end
+                return l
+            end
+
+            return rPrint(response, l, i)
+        end
+
         return response
     end
 
-    local response = error_handler(retriveMessage(tbody))
-    self.Log.debug('SOAP Response: ' .. tostring(xml.eval(response)), self._debug)
-
-    return response
+    return tbody
 end
 
 return CMDBuild

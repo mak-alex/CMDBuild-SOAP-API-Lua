@@ -14,6 +14,8 @@ local Card = {
 Card.__index = Card -- get indices from the table
 Card.__metatable = Card -- protect the metatable
 
+local getMenuSchemaResponse = {
+}
 ------------------------------------------------------------------------
 -- get
 -- list mts: getCard, getCardList, getCardHistory and etc.
@@ -54,8 +56,8 @@ function Card:get(classname)
             table.insert(request.entries, attributes)
         end
 
-        local resp = self:call(request)
-        return xml.eval(resp):find 'ns2:return'
+        local response = self:call(request)
+        return response --self:decode(response)
     end
 
     mts.card_menu_schema = function()
@@ -64,28 +66,16 @@ function Card:get(classname)
         request.entries = {}
 
         local resp = self:call(request)
-        return xml.eval(resp):find 'ns2:return'
+        return resp
     end
-    local getMenuSchemaResponse = {
-        id = 0,
-        menuType = 0,
-        parentId = 0,
-        position = 0
-    }
+
     mts.menu_schema = function()
         local request = {}
         request.method = "getMenuSchema"
         request.entries = {}
 
-        local resp = xml.eval(self:call(request)):find'ns2:return'
-        for level = 1, #resp do
-        end
-        for _, node in pairs(resp) do
-            if type(node) == 'table' then
-                getMenuSchemaResponse[node[node.TAG]]=node[1]
-            end
-        end
-        return getMenuSchemaResponse
+        local resp = self:call(request)
+        return resp
     end
     ------------------------------------------------------------------------
     --  Card:history
@@ -113,7 +103,7 @@ function Card:get(classname)
         }
 
         local resp = self:call(request)
-        return xml.eval(resp)
+        return resp
     end
     ------------------------------------------------------------------------
     --  Card:list
@@ -253,24 +243,7 @@ function Card:get(classname)
         end
 
         local response = self:call(request)
-        local nsreturn = xml.eval(response):find 'ns2:return'
-
-        local countCards = function(classname, nsreturn)
-            local decoderesp = self.Utils.decode(nsreturn)
-            if not decoderesp.Id then
-                self.Log.warn(string.format("Failed to get cards for the class: \'%s\'", classname),
-                    self.verbose)
-                return
-            else
-                self.Log.info(
-                    string.format('Received cards for the class: \'%s\' in quantity: \'%d\'', classname, self.Utils.tsize(decoderesp)),
-                    self.verbose
-                )
-            end
-        end
-        countCards(classname, nsreturn)
-
-        return nsreturn
+        return response -- self:decode(response)
     end
     return mts
 end
@@ -288,6 +261,7 @@ end
 -- @return : id - (number)
 ------------------------------------------------------------------------
 function Card:create(classname, attributes_list, metadata)
+    local Id
     local request = {}
     request.method = "createCard"
     request.entries = {
@@ -297,15 +271,14 @@ function Card:create(classname, attributes_list, metadata)
     table.insert(request.entries[1], { tag = "soap1:className", classname })
 
     if attributes_list then
-        local attributes = {}
         for k, v in pairs(attributes_list) do
-            table.insert(attributes, {
+            table.insert(request.entries[1],
+             {
                 tag = "soap1:attributeList",
                 { tag = "soap1:name", self.Utils.escape(tostring(k)) },
                 { tag = "soap1:value", self.Utils.escape(tostring(v)) },
-            })
+             })
         end
-        table.insert(request.entries[1], attributes)
     end
 
     if metadata then
@@ -318,9 +291,22 @@ function Card:create(classname, attributes_list, metadata)
             }
         })
     end
+    local exists_card, exists_response
+    table.foreach(attributes_list, function(k, v)
+        exists_response = self:get(classname).list(nil, {name=k, operator='EQUALS', value=v})
+        exists_card = exists_response.decode()
+        Id = exists_card.entries.Id
+        if Id then
+            self.Log.warn(string.format('Class: %s, attributes: %s - exists', classname, k..'='..v), self.verbose)
+        end
+    end
+    )
+    if Id[next(Id)] then
+        return exists_response
+    end
 
     local resp = self:call(request)
-    return xml.eval(resp):find 'ns2:return'
+    return resp
 end
 
 ------------------------------------------------------------------------
@@ -347,15 +333,13 @@ function Card:update(classname, card_id, attributes_list, metadata)
     }
 
     if attributes_list then
-        local attributes = {}
         for k, v in pairs(attributes_list) do
-            table.insert(attributes, {
+            table.insert(request.entries[1], {
                 tag = "soap1:attributeList",
                 { tag = "soap1:name", self.Utils.escape(tostring(k)) },
                 { tag = "soap1:value", self.Utils.escape(tostring(v)) },
             })
         end
-        table.insert(request.entries[1], attributes)
     end
 
     if metadata then
@@ -370,7 +354,7 @@ function Card:update(classname, card_id, attributes_list, metadata)
     end
 
     local resp = self:call(request)
-    return xml.eval(resp):find 'ns2:return'
+    return resp
 end
 
 ------------------------------------------------------------------------
@@ -389,8 +373,13 @@ function Card:delete(classname, card_id)
         { tag = "soap1:cardId", card_id }
     }
 
+    if not card_id then
+        self.Log.warn('card_id can\'t be empty', self.verbose)
+        return
+    end
+
     local resp = self:call(request)
-    return xml.eval(resp):find 'ns2:return'
+    return resp
 end
 
 return Card
