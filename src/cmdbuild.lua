@@ -40,14 +40,13 @@ local CMDBuild = {
     webservices = 'http://__ip__/cmdbuild/services/soap/Webservices',
     ltn12 = require 'ltn12',
     client = { http = require 'socket.http', },
-    Log = require 'lib.Log',
-    Utils = require 'lib.Utils',
-    Card = require 'lib.cmdbuild.card',
-    Relation = require 'lib.cmdbuild.relation',
-    Attachment = require 'lib.cmdbuild.attachment',
-    Lookup = require 'lib.cmdbuild.lookup',
-    Workflow = require 'lib.cmdbuild.workflow',
-    Xml = require("lib.xmlSimple").newParser()
+    Log = require 'src.Log',
+    Utils = require 'src.Utils',
+    Card = require 'src.cmdbuild.card',
+    Relation = require 'src.cmdbuild.relation',
+    Attachment = require 'src.cmdbuild.attachment',
+    Lookup = require 'src.cmdbuild.lookup',
+    Workflow = require 'src.cmdbuild.workflow',
 }
 
 CMDBuild.__index = CMDBuild -- get indices from the table
@@ -452,7 +451,11 @@ function CMDBuild:call(args)
     end
 
     local response =  retriveMessage(tbody)
-    self.Log.debug('SOAP Response: ' .. tostring(xml.eval(response)), self._debug)
+    if response then
+      self.Log.debug('SOAP Response: ' .. tostring(xml.eval(response)), self._debug)
+    else
+      return
+    end
     tbody.xml = function()
         return error_handler(response)
     end
