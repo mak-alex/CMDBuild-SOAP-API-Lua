@@ -50,7 +50,7 @@ function Relation:get()
         return xml.eval(resp)
     end
 
-    methods.list = function(domain_name, classname, id)
+    methods.list_ext = function(domain_name, classname, id)
         local request = {}
         request.method = "getRelationListExt"
         request.entries = {
