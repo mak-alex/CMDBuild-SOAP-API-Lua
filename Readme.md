@@ -1,4 +1,6 @@
 # CMDBuild SOAP API Wrapper
+![Alt text](http://www.cmdbuild.org/logo.png) | ![Alt text](https://upload.wikimedia.org/wikipedia/commons/6/6a/Lua-logo-nolabel.svg)
+--------------------------------------------- | -------------------------------------------------------------------------------------
 CMDBuild is an open source software to manage the configuration database (CMDB).
 CMDBuild is compliant with ITIL "best practices" for the IT services management according to process-oriented criteria.
 
@@ -52,4 +54,4 @@ CMDBuild is compliant with ITIL "best practices" for the IT services management 
 	-- local response = CMDBuild.Relation:delete(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
 ```
 
-Please report error with the hashtag #cmdbuild_soap_api to the mail <alex-m.a.k@yandex.kz>
+###### Please report error with the hashtag #cmdbuild_soap_api to the mail <alex-m.a.k@yandex.kz>
