@@ -53,15 +53,15 @@ CMDBuild is compliant with ITIL "best practices" for the IT services management 
 	
 ###Usage
 ```
-	require'luarocks.loader'
-	local cmdbuild=require'cmdbuild':new('CMDBuidlPID', false, true, false)
-	cmdbuild:set_credentials{
-		username='admin, 
-		password='password', 
-		ip='localhost' -- or maybe url = 'http://localhost/services/soap/Webservices'
-	}
-	local response = CMDBuild.Card:get('Hosts').list()
-	response.decode().tprint()
+  require'luarocks.loader'
+  local cmdbuild=require'cmdbuild':new('CMDBuidlPID', false, true, false)
+  cmdbuild:set_credentials{
+    username='login', 
+    password='password', 
+    ip='localhost' -- or maybe url = 'http://localhost/services/soap/Webservices'
+  }.insertHeader()
+  local response = cmdbuild.Card:get('Hosts').list()
+  response.decode().tprint()
 ```
 
 #### Please report error with the hashtag **#cmdbuild_soap_api** to the mail <alex-m.a.k@yandex.kz>
