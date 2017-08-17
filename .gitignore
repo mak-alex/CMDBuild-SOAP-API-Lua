@@ -1,3 +1,10 @@
 *.lua.swp
 *.log
-
+*.src.rock
+*.tar.*
+bin/
+luastatic
+*.ld
+*.iml
+tests/
+*manifest-*

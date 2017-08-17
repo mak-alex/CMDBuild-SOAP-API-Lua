@@ -14,7 +14,7 @@ local Relation = {
 Relation.__index = Relation -- get indices from the table
 Relation.__metatable = Relation -- protect the metatable
 
-function Relation:get()
+function Relation:get(domain_name)
     local methods = {}
     ------------------------------------------------------------------------
     --  Relation:getRelationList
@@ -24,7 +24,7 @@ function Relation:get()
     -- @param id - Identifier of the first card which takes part in the relation (number)
     -- @return {+RETURNS+}
     ------------------------------------------------------------------------
-    methods.list = function(domain_name, classname, id)
+    methods.list = function(classname, id)
         local request = {}
         request.method = "getRelationList"
         request.entries = {
@@ -37,7 +37,7 @@ function Relation:get()
         return xml.eval(resp):find 'ns2:return'
     end
 
-    methods.attributes = function(domain_name, classname, id)
+    methods.attributes = function(classname, id)
         local request = {}
         request.method = "getRelationAttributes"
         request.entries = {
@@ -50,7 +50,7 @@ function Relation:get()
         return xml.eval(resp)
     end
 
-    methods.list_ext = function(domain_name, classname, id)
+    methods.list_ext = function(classname, id)
         local request = {}
         request.method = "getRelationListExt"
         request.entries = {
@@ -77,7 +77,7 @@ function Relation:get()
     -- @param end_date - Date when the relation was created (format YYYY-MM-DDThh:mm:ssZ) (date)
     -- @return table
     ------------------------------------------------------------------------
-    methods.history = function(domain_name, class1name, card1id, class2name, card2id, status, begin_date, end_date)
+    methods.history = function(class1name, card1id, class2name, card2id, status, begin_date, end_date)
         local request = {}
         request.method = "getRelationHistory"
         request.entries = {

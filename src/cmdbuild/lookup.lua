@@ -17,7 +17,7 @@ Lookup.__metatable = Lookup -- protect the metatable
 -- List methods: list, by_id, translation_by_id
 --@usage cmdbuild.Lookup:get().list(your_args)
 ------------------------------------------------------------------------
-function Lookup:get()
+function Lookup:get(lookup_type)
     ------------------------------------------------------------------------
     --@table methods
     --@field list
@@ -38,7 +38,7 @@ function Lookup:get()
     -- @param need_parent_list - {+DESCRIPTION+} ({+TYPE+})
     -- @return {+RETURNS+}
     ------------------------------------------------------------------------
-    methods.list = function(lookup_type, value, need_parent_list)
+    methods.list = function(value, need_parent_list)
         local request = {}
         request.method = "getLookupList"
         request.entries = {
@@ -57,7 +57,7 @@ function Lookup:get()
         return xml.eval(resp):find 'ns2:return'
     end
 
-    methods.list_by_code = function(lookup_type, code, need_parent_list)
+    methods.list_by_code = function(code, need_parent_list)
         local request = {}
         request.method = "getLookupListByCode"
         request.entries = {
