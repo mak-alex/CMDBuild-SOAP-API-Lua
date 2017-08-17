@@ -2,7 +2,7 @@ package = "cmdbuild"
 version = "0.1.0-1"
 source = {
   url = "https://bitbucket.org/enlab/cmdbuild_soap_api/get/master.tar.gz",
-  dir = 'enlab-cmdbuild_soap_api-670e8160666e'
+  dir = 'enlab-cmdbuild_soap_api-3c652434be64'
 }
 description = {
   summary = "CMDBuild SOAP API Wrapper",
