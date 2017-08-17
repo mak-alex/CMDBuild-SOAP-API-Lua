@@ -1,13 +1,18 @@
 package = "cmdbuild"
-version = "0.1.0-8"
+version = "0.1.0-1"
 source = {
-  url = "https://bitbucket.org/enlab/cmdbuild_soap_api",
-  tag = "0.1.0-8"
+  url = "https://bitbucket.org/enlab/cmdbuild_soap_api/get/master.tar.gz",
+  dir = 'enlab-cmdbuild_soap_api-670e8160666e'
 }
 description = {
   summary = "CMDBuild SOAP API Wrapper",
   detailed = [[
-    cmdbuild is/will be a unified wrapper around a few common lua http client libraries
+    CMDBuild is an open source software to manage the configuration database (CMDB).
+
+    CMDBuild is compliant with ITIL "best practices" for the IT services management according to process-oriented criteria.
+
+
+    cmdbuild soap api wrapper
     ]],
     homepage = "https://bitbucket.org/enlab/cmdbuild_soap_api",
     license = "MIT"
@@ -15,10 +20,12 @@ description = {
 dependencies = {
   "luasocket ~> 3.0rc1-2",
   "luaxml ~> 101012-2",
-  "lua-cjson ~> 2.1.0-1"
+  "lua-cjson ~> 2.1.0-1",
+  "bit32 ~> 5.3.0-1"
 }
 build = {
-  type = "builtin",
+  type = 'builtin',
+  copy_directories = { 'doc' },
   modules = {
     ['cmdbuild'] = 'src/cmdbuild.lua',
     ['cmdbuild.attachment'] = 'src/cmdbuild/attachment.lua',

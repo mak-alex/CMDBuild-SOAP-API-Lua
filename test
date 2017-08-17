@@ -1,0 +1,27 @@
+package = "cmdbuild-soap-api"
+version = "../cmdbuild-1"
+source = {
+   url = "*** please add URL for source tarball, zip or repository here ***",
+   tag = "1.0"
+}
+description = {
+   summary = "*** please specify description summary ***",
+   detailed = "*** please enter a detailed description ***",
+   homepage = "*** please enter a project homepage ***",
+   license = "*** please specify a license ***"
+}
+dependencies = {}
+build = {
+   type = "builtin",
+   modules = {
+      Log = "src/Log.lua",
+      Utils = "src/Utils.lua",
+      base64 = "src/base64.lua",
+      cmdbuild = "src/cmdbuild.lua",
+      ['cmdbuild.attachment'] = "src/cmdbuild/attachment.lua",
+      ['cmdbuild.card'] = "src/cmdbuild/card.lua",
+      ['cmdbuild.lookup'] = "src/cmdbuild/lookup.lua",
+      ['cmdbuild.relation'] = "src/cmdbuild/relation.lua",
+      ['cmdbuild.workflow'] = "src/cmdbuild/workflow.lua"
+   }
+}

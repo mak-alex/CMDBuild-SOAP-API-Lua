@@ -40,23 +40,10 @@ local CMDBuild = {
     webservices = 'http://__ip__/cmdbuild/services/soap/Webservices',
     ltn12 = require 'ltn12',
     client = { http = require 'socket.http', },
-    Log = require 'src.Log',
-    Utils = require 'src.Utils',
-    Card = require 'src.cmdbuild.card',
-    Relation = require 'src.cmdbuild.relation',
-    Attachment = require 'src.cmdbuild.attachment',
-    Lookup = require 'src.cmdbuild.lookup',
-    Workflow = require 'src.cmdbuild.workflow',
 }
 
 CMDBuild.__index = CMDBuild -- get indices from the table
 CMDBuild.__metatable = CMDBuild -- protect the metatable
-
-setmetatable(CMDBuild.Attachment, { __index = CMDBuild })
-setmetatable(CMDBuild.Card, { __index = CMDBuild })
-setmetatable(CMDBuild.Lookup, { __index = CMDBuild })
-setmetatable(CMDBuild.Relation, { __index = CMDBuild })
-setmetatable(CMDBuild.Workflow, { __index = CMDBuild })
 
 ---------------------------------------------------------------------
 -- @param attr Table of object's attributes.
@@ -104,14 +91,28 @@ end
 -- @return instance
 ------------------------------------------------------------------------
 function CMDBuild:new(pid, logcolor, verbose, _debug)
-    CMDBuild.Log.pid = pid or 'cmdbuild_soap_api'
-    CMDBuild.usecolor = logcolor or false
     CMDBuild.Header = {}
     CMDBuild.username = nil
     CMDBuild.password = nil
     CMDBuild.url = nil
     CMDBuild.verbose = verbose or false
     CMDBuild._debug = _debug or false
+
+    CMDBuild.Log = require 'src.Log'
+    CMDBuild.Log.pid = pid or 'cmdbuild_soap_api'
+    CMDBuild.Log.usecolor = logcolor or false
+    CMDBuild.Utils = require 'src.Utils'
+    CMDBuild.Card = require 'src.cmdbuild.card'
+    CMDBuild.Relation = require 'src.cmdbuild.relation'
+    CMDBuild.Attachment = require 'src.cmdbuild.attachment'
+    CMDBuild.Lookup = require 'src.cmdbuild.lookup'
+    CMDBuild.Workflow = require 'src.cmdbuild.workflow'
+
+    setmetatable(CMDBuild.Attachment, { __index = CMDBuild })
+    setmetatable(CMDBuild.Card, { __index = CMDBuild })
+    setmetatable(CMDBuild.Lookup, { __index = CMDBuild })
+    setmetatable(CMDBuild.Relation, { __index = CMDBuild })
+    setmetatable(CMDBuild.Workflow, { __index = CMDBuild })
 
     return CMDBuild
 end
