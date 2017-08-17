@@ -1,40 +1,5 @@
-local log = {
-    _AUTHOR = "Alexandr Mikhailenko a.k.a Alex M.A.K. <alex-m.a.k@yandex.kz>",
-    _DESCRIPTION = [[
-  log.lua provides 6 functions, each function takes all its arguments,
-  concatenates them into a string then outputs the string to the console and -- if one is set -- the log file:
-    log.trace(message, status) -- where message = string and status = bool
-    log.debug(message, status)
-    log.info(message, status)
-    log.warn(message, status)
-    log.error(message, status)
-    log.fatal(message, status)
-
-  Additional options
-    log.lua provides variables for setting additional options:
-      log.usecolor
-        Whether colors should be used when outputting to the console, this is true by default.
-        If you are using a console which does not support ANSI color escape codes then this should be disabled.
-
-      log.outfile
-        The name of the file where the log should be written,
-        log files do not contain ANSI colors and always use the full date rather than just the time.
-        By default log.outfile is nil (no log file is used).
-        If a file which does not exist is set as the log.outfile then it is created on the first message logged.
-        If the file already exists it is appended to.
-
-      log.level
-        The minimum level to log, any logging function called with
-        a lower level than the log.level is ignored and no text is outputted or written.
-        By default this value is set to "trace", the lowest log level, such that no log messages are ignored.
-
-        The level of each log mode, starting with the lowest log level is as follows: "trace" "debug" "info" "warn" "error" "fatal"
-    Example:
-      local log = require "log"
-      log.info('test message', true)
-  ]],
-    _VERSION = "1.0"
-}
+-- не моя либы, не помню где взял, не помню почему стоили мои инициалы..ложь и пиздежь
+local log = {}
 
 function log.toboolean(str)
     if type(str) ~= "string" or (str ~= "true" and str ~= "false") or not str then
