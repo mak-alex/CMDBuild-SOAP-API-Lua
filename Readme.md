@@ -1,5 +1,5 @@
 # CMDBuild SOAP API Wrapper
-![Alt text](http://www.cmdbuild.org/logo.png) | ![Alt text](http://www.rozek.de/Lua/Lua-Logo_128x128.png)
+![Alt text](http://www.cmdbuild.org/logo.png)![Alt text](http://www.rozek.de/Lua/Lua-Logo_128x128.png)
 
 CMDBuild is an open source software to manage the configuration database (CMDB).
 CMDBuild is compliant with ITIL "best practices" for the IT services management according to process-oriented criteria.
@@ -13,14 +13,12 @@ CMDBuild is compliant with ITIL "best practices" for the IT services management 
 	bit32 - luarocks install bit32 --local
 	lua-cjson - luarocks install lua-cjson --local
 
-### Implemented methods:
-
 ```
-	CMDBuild.Card:get('Hosts').list(classname - stringattributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
-	CMDBuild.Card:get('Hosts').card(card_id, {attributes})
-	CMDBuild.Card:create('Hosts', {your_attributes}, {your_metadata})
-	CMDBuild.Card:delete('Hosts', card_id)
-	CMDBuild.Card:update('Hosts', card_id, {your_attributes}, {your_metadata})
+	CMDBuild.Card:get(classname).list(attributes_list, filter, filter_sq_operator, order_type, limit, offset, full_text_query, cql_query, cql_query_parameters)
+	CMDBuild.Card:get(classname).card(card_id, {attributes})
+	CMDBuild.Card:create(classname, {your_attributes}, {your_metadata})
+	CMDBuild.Card:delete(classname, card_id)
+	CMDBuild.Card:update(classname, card_id, {your_attributes}, {your_metadata})
 	
 	CMDBuild.Workflow:start(classname, {your_attributes}, {your_metadata}, complete_task)
 	CMDBuild.Workflow:update(processid, {your_attributes}, complete_task)
@@ -50,7 +48,8 @@ CMDBuild is compliant with ITIL "best practices" for the IT services management 
 
 ### Install
 	luarocks install cmdbuild --local
-	# or git clone https://bitbucket.org/enlab/cmdbuild_soap_api and install dependencies
+	# or 
+	git clone https://bitbucket.org/enlab/cmdbuild_soap_api # and install dependencies
 	
 ###Usage
 ```
