@@ -98,15 +98,15 @@ function CMDBuild:new(pid, logcolor, verbose, _debug)
     CMDBuild.verbose = verbose or false
     CMDBuild._debug = _debug or false
 
-    CMDBuild.Log = require 'src.Log'
+    CMDBuild.Log = require 'Log'
     CMDBuild.Log.pid = pid or 'cmdbuild_soap_api'
     CMDBuild.Log.usecolor = logcolor or false
-    CMDBuild.Utils = require 'src.Utils'
-    CMDBuild.Card = require 'src.cmdbuild.card'
-    CMDBuild.Relation = require 'src.cmdbuild.relation'
-    CMDBuild.Attachment = require 'src.cmdbuild.attachment'
-    CMDBuild.Lookup = require 'src.cmdbuild.lookup'
-    CMDBuild.Workflow = require 'src.cmdbuild.workflow'
+    CMDBuild.Utils = require 'Utils'
+    CMDBuild.Card = require 'cmdbuild.card'
+    CMDBuild.Relation = require 'cmdbuild.relation'
+    CMDBuild.Attachment = require 'cmdbuild.attachment'
+    CMDBuild.Lookup = require 'cmdbuild.lookup'
+    CMDBuild.Workflow = require 'cmdbuild.workflow'
 
     setmetatable(CMDBuild.Attachment, { __index = CMDBuild })
     setmetatable(CMDBuild.Card, { __index = CMDBuild })

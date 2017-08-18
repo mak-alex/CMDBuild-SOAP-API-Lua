@@ -30,6 +30,7 @@ build = {
     ['cmdbuild'] = 'src/cmdbuild.lua',
     ['cmdbuild.attachment'] = 'src/cmdbuild/attachment.lua',
     ['cmdbuild.card'] = 'src/cmdbuild/card.lua',
+    ['cmdbuild.relation'] = 'src/cmdbuild/relation.lua',
     ['cmdbuild.lookup'] = 'src/cmdbuild/lookup.lua',
     ['cmdbuild.workflow'] = 'src/cmdbuild/workflow.lua',
     ['base64'] = 'src/base64.lua',

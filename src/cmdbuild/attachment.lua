@@ -7,7 +7,7 @@
 -- To change this template use File | Settings | File Templates.
 --
 -- Подключаем библиотеку для работы с base64, нужна для работы с аттачментами
-local base64 = require'src.base64'
+local base64 = require'base64'
 
 local Attachment = {
     type = 'Attachment',
